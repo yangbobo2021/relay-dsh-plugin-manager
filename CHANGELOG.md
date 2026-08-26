@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.0-rc.3] - 2026-08-26
+
+### Added
+
+- Read-only Plugin Marketplace help under Settings > Plugins.
+- Localized Chat examples for discovery, installation, removal, and inventory.
+- Packed client-bundle and browser UI acceptance coverage.
+- English and Chinese quick-start documentation for standalone DSH, KeySync,
+  and the wider Relay DSH plugin catalog.
+
 ## [0.1.0-rc.2] - 2026-08-26
 
 ### Changed
@@ -26,3 +36,4 @@ All notable changes to this project are documented here.
 
 [0.1.0-rc.1]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/releases/tag/v0.1.0-rc.1
 [0.1.0-rc.2]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/releases/tag/v0.1.0-rc.2
+[0.1.0-rc.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.2...v0.1.0-rc.3

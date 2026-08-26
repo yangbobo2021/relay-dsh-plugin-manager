@@ -1,127 +1,101 @@
-# Relay DSH Plugin Manager
+# Plugin Manager for DeepSeek Harness
 
-[![npm](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
+[![npm version](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![CI](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml)
-[![DSH plugin](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4c1)](https://github.com/topics/dsh-plugin)
+[![npm downloads](https://img.shields.io/npm/dm/relay-dsh-plugin-manager?label=downloads)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
+[![GitHub stars](https://img.shields.io/github/stars/yangbobo2021/relay-dsh-plugin-manager?style=flat)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/stargazers)
+[![MIT license](https://img.shields.io/github/license/yangbobo2021/relay-dsh-plugin-manager)](LICENSE)
+[![DSH compatibility](https://img.shields.io/badge/DSH-0.1.1--rc.2-2f7d68)](https://github.com/deepseek-ai/deepseek-harness)
+[![npm trusted publishing](https://img.shields.io/badge/npm_trusted_publishing-enabled-2f9e44)](.github/workflows/release.yml)
 
-Conversation-first plugin discovery and lifecycle management for the DeepSeek
-Harness `web` profile. The package has no settings UI and registers no public
-management HTTP routes.
+English | [中文](README.zh.md)
+
+**npm package:** [`relay-dsh-plugin-manager`](https://www.npmjs.com/package/relay-dsh-plugin-manager)
+· [Relay DSH plugin catalog](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/dsh-plugins.md)
+
+`relay-dsh-plugin-manager` lets you discover and manage DSH plugins directly
+from a DeepSeek Harness Chat conversation. Ask for the capability you need, or
+ask DSH to install, update, enable, disable, or remove a plugin. DSH shows a plan
+and waits for confirmation before changing your Profile.
+
+## Install
+
+If you installed official DSH yourself, stop DSH Web and install the published
+npm package with the DSH CLI:
+
+```bash
+dsh plugin --profile web add relay-dsh-plugin-manager@latest
+```
+
+Then start or restart DSH Web:
+
+```bash
+dsh web
+```
+
+The plugin appears under **Settings > Plugins > Plugin marketplace**. This page
+is a short help view; plugin management itself happens in Chat.
+
+### Installed by KeySync
+
+When you use [KeySync](https://sublang.ai/keysync/download/) to install DSH with
+its one-click setup, this plugin is included and installed automatically. You do
+not need to install it again. The command above is for standalone official DSH
+installations or Profiles where the plugin was removed.
+
+## Use
+
+Describe what you want in ordinary language:
+
+```text
+Find a plugin that connects to Lark
+Install relay-dsh-plugin-codex
+List my installed plugins and their status
+Disable example-dsh-plugin
+Remove example-dsh-plugin
+```
+
+You can also use the single `/plugins` command:
+
+```text
+/plugins find a workspace file browser
+/plugins install relay-dsh-plugin-files
+```
+
+Search and inspection are read-only. Installation, update, removal, enablement,
+disablement, and restart always show a plan and require a later confirmation.
 
 ## Real Install Demo
 
 [![Plugin Manager installs relay-dsh-plugin-codex successfully in DSH](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1)
 
-*Watch the [38-second real DSH
-run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1):
-exact npm/GitHub search for `relay-dsh-plugin-codex`, a plan that makes no
-change, separate confirmation, installation, and final `succeeded` status.
-Recorded against official DSH commit
+Watch the [38-second real DSH run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1):
+search, planning without changes, separate confirmation, installation, and the
+final `succeeded` status. It was recorded against official DSH commit
 [`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)
-with Plugin Manager `0.1.0-rc.2` and Codex plugin `0.1.2`; DSH reports that a
-restart is required after installation.*
+with Plugin Manager `0.1.0-rc.2` and Codex plugin `0.1.2`. DSH reports when a
+restart is required after installation.
 
-## Quick Start
+## Part of Relay
 
-Install with the DSH instance that will run the profile, then restart DSH once:
+This plugin is developed in the
+[Relay](https://github.com/yangbobo2021/Relay) integration workspace and is
+published as an independently installable DSH plugin. Relay explores durable
+Agent work, external-event delivery, reusable DSH views, and multiple
+conversation backends.
 
-```sh
-dsh plugin --profile web add --save-exact relay-dsh-plugin-manager@0.1.0-rc.2
-```
+Other Relay DSH plugins:
 
-Search and manage plugins from an ordinary conversation:
+- [Codex conversations](https://github.com/yangbobo2021/relay-dsh-plugin-codex)
+- [Claude Code conversations](https://github.com/yangbobo2021/relay-dsh-plugin-claude)
+- [Workbench panels](https://github.com/yangbobo2021/relay-dsh-plugin-workbench)
+- [Workspace files](https://github.com/yangbobo2021/relay-dsh-plugin-files)
+- [Terminal](https://github.com/yangbobo2021/relay-dsh-plugin-terminal)
 
-```text
-/plugins 找一个能连接飞书的插件
-/plugins 安装 example-dsh-plugin
-```
+See the [complete Relay DSH plugin guide](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/dsh-plugins.md)
+for installation combinations and compatibility notes.
 
-## Conversation Surface
+## Feedback
 
-The bundle contributes one human command and two model tools:
-
-- `/plugins [request]` sends the request to the current Agent;
-- `plugin_discover` lists, searches, inspects, and reports status;
-- `plugin_manage` plans, executes, polls, and cancels mutations.
-
-Ordinary natural-language requests use the same tools. Every install, update,
-remove, enable, disable, or restart is a two-stage operation: the Agent first
-shows a plan, then uses its one-use token only after a later explicit user
-confirmation. The token is bound to that DSH conversation, and same-turn or
-cross-conversation execution is rejected in code.
-
-More examples:
-
-```text
-卸载 example-dsh-plugin
-列出当前插件以及是否需要重启
-```
-
-The official DSH command adds the package to profile dependencies and mounts
-both bundle rows. Restart DSH after the manager itself is first installed.
-
-## Behavior
-
-- npm sources resolve to an exact version and SHA-512 registry integrity.
-- GitHub sources resolve to a full commit before execution.
-- Package mutations call the current official DSH CLI with argv arrays.
-- New simple insert-only bundles may activate without restart; complex bundles
-  and updates report `restartRequired`.
-- Enable/disable owns only exact Loader override rows written by this manager.
-- Disabling a plugin used by the current conversation can interrupt that turn;
-  use another backend or Session when continuity matters.
-- Mutations are serialized, cancellable, and retain pollable terminal status.
-- Automatic restart is a separate confirmed operation and is disabled for a
-  detected systemd main process unless explicitly configured.
-
-Set `allowRestart: false` on the `relay-plugin-manager-host` bundle row to
-disable automatic restart in other deployments as well.
-
-## Search Extensions
-
-Installed Host plugins can inject `pluginSearch`, require `apiVersion === 1`,
-and register a provider:
-
-```ts
-export const inject = ['pluginSearch']
-
-export function apply(ctx) {
-  ctx.pluginSearch.register({
-    id: 'internal-catalog',
-    async search({ query, maxResults, signal }) {
-      return lookupCatalog(query, { maxResults, signal })
-    },
-  })
-}
-```
-
-Providers return npm/GitHub candidates only. Core inspection, immutable source
-resolution, confirmation, installation, rollback, and activation are not
-extension points.
-
-## Verification
-
-```sh
-npm ci --ignore-scripts
-npm run verify
-npm run acceptance:live:codex
-npm run release:dry-run
-```
-
-`verify` runs type checking, unit/integration tests, the production build, and
-a local package E2E that installs the tarball through the immutable official
-DSH checkout. The live command additionally uses the public npm/GitHub services
-and the real `relay-dsh-plugin-codex` package. The RC dry run uses npm's
-`next` dist-tag. See [SPEC.md](./SPEC.md) and
-[docs/acceptance.md](./docs/acceptance.md) for the release contract and
-traceability matrix. The current real-session release record is
-[docs/acceptance/release-candidate-2026-08-26.md](./docs/acceptance/release-candidate-2026-08-26.md).
-Tag-triggered npm publication is defined in
-[docs/releasing.md](./docs/releasing.md).
-
-## Repository Boundary
-
-This is an independently installable package. It imports no Relay parent or
-KeySync implementation code. The local KeySync prototype handoff was used as
-reference material and is intentionally excluded from both git and the npm
-package.
+Report bugs and feature requests in the
+[issue tracker](https://github.com/yangbobo2021/relay-dsh-plugin-manager/issues).

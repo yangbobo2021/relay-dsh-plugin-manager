@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { runInNewContext } from 'node:vm'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const upstreamDir = process.env.DSH_UPSTREAM_DIR === undefined
@@ -12,6 +14,7 @@ const cli = process.env.DSH_CLI_PATH === undefined
   ? join(upstreamDir, 'apps', 'cli', 'lib', 'bin.js')
   : resolve(process.env.DSH_CLI_PATH)
 const inspectUpstream = existsSync(join(upstreamDir, '.git'))
+const require = createRequire(import.meta.url)
 
 function run(file, args, options = {}) {
   try {
@@ -57,6 +60,70 @@ try {
     throw new Error('profile must contain relay-dsh-plugin-manager exactly once in dsh.profile.bundles')
   }
 
+  const installedDir = join(profileDir, 'node_modules', 'relay-dsh-plugin-manager')
+  const installedManifest = JSON.parse(readFileSync(join(installedDir, 'package.json'), 'utf8'))
+  if (installedManifest.exports?.['./client']?.default !== './lib/client.js') {
+    throw new Error('installed package does not export the client bundle')
+  }
+  if (installedManifest.dsh?.client?.platform !== 'web') {
+    throw new Error('installed package does not declare a Web client')
+  }
+
+  let clientModule
+  runInNewContext(readFileSync(join(installedDir, 'lib', 'client.js'), 'utf8'), {
+    window: {
+      __ModuleLoader__: {
+        load(descriptor) { clientModule = descriptor },
+      },
+    },
+  })
+  if (clientModule?.id !== 'relay-dsh-plugin-manager' || typeof clientModule.factory !== 'function') {
+    throw new Error('client bundle did not register the expected module')
+  }
+  const client = clientModule.factory(specifier => require(specifier))
+  if (JSON.stringify(client.inject) !== JSON.stringify(['slots', 'locale'])) {
+    throw new Error('client bundle requests more than slots and locale')
+  }
+  let dictionaries
+  let tab
+  client.apply({
+    effect(setup) { setup() },
+    locale: {
+      register(namespace, value) { dictionaries = { namespace, value } },
+      bind() { return key => dictionaries.value.zh[key] },
+    },
+    slots: {
+      inject(name, contribution) {
+        if (name !== 'settings.plugins.tab') throw new Error(`unexpected client slot ${name}`)
+        contribution()
+      },
+      register(options, component) {
+        tab = { options, component }
+        return () => undefined
+      },
+    },
+  })
+  if (dictionaries?.namespace !== 'settings.pluginMarketplace') {
+    throw new Error('client bundle did not register its locale namespace')
+  }
+  if (tab?.options?.id !== 'marketplace' || tab.options.order !== 20 || tab.options.inject !== undefined) {
+    throw new Error('client bundle did not register the read-only marketplace tab')
+  }
+  const React = require('react')
+  const { renderToStaticMarkup } = require('react-dom/server')
+  const html = renderToStaticMarkup(React.createElement(tab.component, {
+    t: key => dictionaries.value.zh[key],
+  }))
+  if (!html.includes('在聊天中管理插件') || !html.includes('等待你的确认')) {
+    throw new Error('marketplace tab is missing Chinese Chat or confirmation guidance')
+  }
+  if ((html.match(/data-chat-prompt="true"/gu) ?? []).length !== 4) {
+    throw new Error('marketplace tab must render four representative Chat prompts')
+  }
+  if (/<(?:button|input|form|a)\b/u.test(html)) {
+    throw new Error('marketplace tab must not render management controls')
+  }
+
   const dump = run(process.execPath, [cli, '--profile', 'web', '--dump-config'], { env })
   for (const expected of [
     'relay-plugin-search-runtime',
@@ -79,6 +146,7 @@ try {
     package: 'relay-dsh-plugin-manager',
     dependency,
     bundleEntries: ['relay-plugin-search-runtime', 'relay-plugin-manager-host'],
+    clientTab: { id: tab.options.id, promptCount: 4, controls: 0 },
     dshCommit: commit,
     upstreamStatusUnchanged: inspectUpstream,
   }, null, 2)}\n`)

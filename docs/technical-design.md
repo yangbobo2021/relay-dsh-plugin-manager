@@ -8,7 +8,9 @@ The bundle mounts two Host entries:
 2. The manager Host plugin, which owns built-in providers, profile operations,
    model tools, and `/plugins`.
 
-There is no browser client entry and no management HTTP route.
+It also ships one browser client entry that registers a static, read-only
+Plugin Marketplace help tab in `settings.plugins.tab`. The client has no Remote
+dependency and exposes no management action. There is no management HTTP route.
 
 ## Request Flow
 
@@ -28,6 +30,10 @@ natural language --------------------------+
                                           postcondition -> hot activation
                                                                |
                                                      restart fallback
+
+Settings > Plugins > Plugin Marketplace
+        |
+        +-- localized Chat examples only (no Host call or mutation control)
 ```
 
 ## Compact Conversation Surface

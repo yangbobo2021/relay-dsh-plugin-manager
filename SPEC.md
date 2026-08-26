@@ -7,8 +7,12 @@ Target profile: the running `web` profile
 ## Product Contract
 
 Relay DSH Plugin Manager is a conversation-first, independently installable
-DeepSeek Harness bundle. It discovers and manages DSH profile plugins without a
-management UI or public management HTTP routes.
+DeepSeek Harness bundle. It discovers and manages DSH profile plugins through
+conversation, without management controls or public management HTTP routes.
+
+The package contributes a read-only Plugin Marketplace help tab under
+Settings > Plugins. That tab explains how to search, install, remove, and list
+plugins from Chat; it does not call the Host or mutate plugin state.
 
 The user may enter `/plugins <request>` or describe the same request in ordinary
 conversation. Both paths use the same model-facing tools and Host management
@@ -38,6 +42,7 @@ service.
 | PM-018 | Reject unsafe source tokens, flags, whitespace/control characters, shell metacharacters, unsupported URL hosts, ambiguous package names, and mutable execution sources. Build scripts remain governed by pnpm/DSH and are never silently authorized. |
 | PM-019 | Expose no public plugin-management HTTP routes and impose no client-address, Origin, CORS, or loopback policy. The callable surface is the in-process DSH command/tool plane. |
 | PM-020 | Remain independently installable. Do not import Relay parent implementation code or KeySync implementation code. Runtime interactions use DSH/Cordis public services and the official CLI. |
+| PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`. It briefly explains conversation-based discovery and lifecycle management, includes representative search/install/remove/list prompts, and states that mutations wait for confirmation. It exposes no management control, Remote call, or additional Host service. |
 
 ## Command Grammar
 
@@ -75,7 +80,8 @@ one provider before deterministic cross-provider ordering.
 
 ## Explicit Non-Goals
 
-- Settings page, dashboard, or any other management UI.
+- Settings controls, dashboard, or any other second management workflow. The
+  read-only Plugin Marketplace help tab is explicitly in scope.
 - Public management REST/HTTP endpoints.
 - Provider-defined installers, shell commands, or arbitrary pnpm arguments.
 - Arbitrary tarball, filesystem, SSH Git, or non-GitHub Git installation in the
