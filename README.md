@@ -1,8 +1,27 @@
 # Relay DSH Plugin Manager
 
+[![npm](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
+[![CI](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml)
+[![DSH plugin](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4c1)](https://github.com/topics/dsh-plugin)
+
 Conversation-first plugin discovery and lifecycle management for the DeepSeek
 Harness `web` profile. The package has no settings UI and registers no public
 management HTTP routes.
+
+## Quick Start
+
+Install with the DSH instance that will run the profile, then restart DSH once:
+
+```sh
+dsh plugin --profile web add --save-exact relay-dsh-plugin-manager@0.1.0-rc.2
+```
+
+Search and manage plugins from an ordinary conversation:
+
+```text
+/plugins 找一个能连接飞书的插件
+/plugins 安装 example-dsh-plugin
+```
 
 ## Conversation Surface
 
@@ -18,21 +37,11 @@ shows a plan, then uses its one-use token only after a later explicit user
 confirmation. The token is bound to that DSH conversation, and same-turn or
 cross-conversation execution is rejected in code.
 
-Examples:
+More examples:
 
 ```text
-/plugins 找一个能连接飞书的插件
-/plugins 安装 example-dsh-plugin
 卸载 example-dsh-plugin
 列出当前插件以及是否需要重启
-```
-
-## Installation
-
-Install with the DSH instance that will run the profile:
-
-```sh
-dsh plugin --profile web add --save-exact relay-dsh-plugin-manager@0.1.0-rc.1
 ```
 
 The official DSH command adds the package to profile dependencies and mounts
