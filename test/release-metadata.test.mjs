@@ -32,7 +32,7 @@ test('release workflow guards and verifies npm publication', async () => {
   assert.match(workflow, /node scripts\/release-metadata\.mjs/)
   assert.match(workflow, /git merge-base --is-ancestor/)
   assert.match(workflow, /npm publish --provenance --access public --tag/)
-  assert.match(workflow, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/)
+  assert.doesNotMatch(workflow, /NODE_AUTH_TOKEN|NPM_TOKEN/)
   assert.match(workflow, /Verify the published dist-tag/)
   assert.match(workflow, /npm view "\$\{package_name\}@\$\{npm_tag\}" version/)
 })

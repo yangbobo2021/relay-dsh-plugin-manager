@@ -19,11 +19,11 @@ validates the tag, verifies against the official published DSH CLI locked in
 chain, audits production dependencies, inspects the tarball, refuses to
 republish an existing version, and verifies the resulting npm dist-tag.
 
-## First Publication
+## First Publication Bootstrap
 
-The first publication uses a short-lived granular npm token stored as the
-repository's `NPM_TOKEN` Actions secret. The token must allow publishing this
-public package and satisfy the npm account's 2FA policy.
+The first publication of `0.1.0-rc.1` used a short-lived granular npm token
+stored as the repository's `NPM_TOKEN` Actions secret. The token allowed
+publishing this public package and satisfied the npm account's 2FA policy.
 
 After the first version exists, configure its npm Trusted Publisher:
 
@@ -33,8 +33,10 @@ After the first version exists, configure its npm Trusted Publisher:
 - workflow filename: `release.yml`
 - allowed action: `npm publish`
 
-Then remove the `NPM_TOKEN` repository secret. The workflow already grants
-`id-token: write` and uses an OIDC-capable npm CLI.
+The publisher is now configured. The bootstrap npm token and `NPM_TOKEN`
+repository secret have been removed. The release workflow grants
+`id-token: write`, uses an OIDC-capable npm CLI, and must not reference a
+static npm credential.
 
 ## Release
 

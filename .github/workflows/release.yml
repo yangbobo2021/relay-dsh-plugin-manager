@@ -25,7 +25,7 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.7.0
       - run: npm ci --ignore-scripts
@@ -58,8 +58,6 @@ jobs:
       - name: Publish to npm
         if: steps.registry.outputs.exists != 'true'
         run: npm publish --provenance --access public --tag "${{ steps.release.outputs.npm_tag }}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Verify the published dist-tag
         shell: bash
         run: |
