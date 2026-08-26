@@ -8,6 +8,19 @@ Conversation-first plugin discovery and lifecycle management for the DeepSeek
 Harness `web` profile. The package has no settings UI and registers no public
 management HTTP routes.
 
+## Real Install Demo
+
+[![Plugin Manager installs relay-dsh-plugin-codex successfully in DSH](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1)
+
+*Watch the [38-second real DSH
+run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1):
+exact npm/GitHub search for `relay-dsh-plugin-codex`, a plan that makes no
+change, separate confirmation, installation, and final `succeeded` status.
+Recorded against official DSH commit
+[`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)
+with Plugin Manager `0.1.0-rc.2` and Codex plugin `0.1.2`; DSH reports that a
+restart is required after installation.*
+
 ## Quick Start
 
 Install with the DSH instance that will run the profile, then restart DSH once:
