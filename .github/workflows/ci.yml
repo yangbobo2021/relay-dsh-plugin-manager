@@ -16,8 +16,8 @@ jobs:
         node: [22, 24]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -31,13 +31,13 @@ jobs:
   package-acceptance:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm install --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
+      - run: npm install --ignore-scripts --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
       - run: npm run build
       - run: npm run acceptance
         env:
