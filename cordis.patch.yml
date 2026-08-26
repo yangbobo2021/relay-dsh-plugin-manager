@@ -1,0 +1,5 @@
+- insert:
+    - id: relay-plugin-search-runtime
+      name: 'relay-dsh-plugin-manager/search'
+    - id: relay-plugin-manager-host
+      name: 'relay-dsh-plugin-manager'
