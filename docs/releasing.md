@@ -14,10 +14,10 @@
 ## Publication Gates
 
 The tag workflow installs dependencies without dependency lifecycle scripts,
-validates the tag, verifies against the official published DSH CLI, runs the
-complete test/build/package acceptance chain, audits production dependencies,
-inspects the tarball, refuses to republish an existing version, and verifies
-the resulting npm dist-tag.
+validates the tag, verifies against the official published DSH CLI locked in
+`test/fixtures/dsh-runtime`, runs the complete test/build/package acceptance
+chain, audits production dependencies, inspects the tarball, refuses to
+republish an existing version, and verifies the resulting npm dist-tag.
 
 ## First Publication
 

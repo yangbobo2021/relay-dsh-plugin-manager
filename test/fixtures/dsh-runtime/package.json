@@ -1,0 +1,9 @@
+{
+  "name": "relay-dsh-plugin-manager-dsh-runtime-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.1.1-rc.2"
+  }
+}

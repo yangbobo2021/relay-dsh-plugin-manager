@@ -25,7 +25,7 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-017 operation progress is bounded, a concurrent mutation is refused, cancellation reaches the runner, and terminal status is retained | PM-015 | operation integration |
 | A-018 restart requires a separate plan, is refused under supervisor/disabled config, and schedules exact invocation otherwise | PM-016 | restart unit |
 | A-019 package exposes no client entry or management HTTP route and registers exactly one command/two tools | PM-001, PM-002, PM-019 | package/loader integration |
-| A-020 packed tarball installs through official DSH CLI into a clean profile and contributes both Host rows without modifying DSH | PM-020 | local package E2E |
+| A-020 packed tarball installs through official DSH CLI into a clean profile and contributes both Host rows without modifying DSH | PM-020 | local checkout E2E + CI against the locked published DSH runtime fixture |
 | A-021 optional live-network acceptance discovers the real Codex plugin through npm/GitHub, installs npm and immutable GitHub sources in isolated DSH homes, boots the npm-installed Web profile, exercises enable/disable/update, and removes both | PM-003-PM-017 | `npm run acceptance:live:codex` |
 | A-022 a real DSH Web Session exposes both tools, serves slash-command and natural-language search, rejects same-turn confirmation, executes later confirmation, and observes Loader HMR without restarting DSH | PM-001, PM-002, PM-009, PM-012, PM-014 | release-candidate walkthrough with real Codex backend |
 
@@ -47,10 +47,12 @@ DSH command/tool registries, and model-tool execution.
 
 ### E2E
 
-Build and pack the package, install the tarball through the repository's
-immutable official DSH checkout into a new temporary `web` profile, and run
-`--dump-config`. Assert package dependency, bundle membership, search-service
-row, manager row, and an unchanged upstream Git status.
+Build and pack the package, install the tarball through an official DSH CLI
+into a new temporary `web` profile, and run `--dump-config`. Local acceptance
+uses the immutable official checkout; CI and release acceptance use the
+published DSH version locked under `test/fixtures/dsh-runtime`. Assert package
+dependency, bundle membership, search-service row, manager row, and an
+unchanged upstream Git status when a checkout is present.
 
 ### Optional release acceptance
 

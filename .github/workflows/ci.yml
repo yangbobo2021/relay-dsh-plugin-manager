@@ -36,9 +36,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
       - run: npm ci --ignore-scripts
-      - run: npm install --legacy-peer-deps --ignore-scripts --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
+      - run: pnpm install --dir test/fixtures/dsh-runtime --frozen-lockfile --ignore-scripts
       - run: npm run build
       - run: npm run acceptance
         env:
-          DSH_CLI_PATH: ${{ github.workspace }}/node_modules/@deepseek-ai/dsh/lib/bin.js
+          DSH_CLI_PATH: ${{ github.workspace }}/test/fixtures/dsh-runtime/node_modules/@deepseek-ai/dsh/lib/bin.js
