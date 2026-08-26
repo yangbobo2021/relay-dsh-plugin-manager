@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Validate release tag
+        id: release
+        run: node scripts/release-metadata.mjs
+      - name: Require the release commit on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Install the official DSH CLI for package acceptance
+        run: npm install --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
+      - name: Verify release package
+        run: npm run verify
+        env:
+          DSH_CLI_PATH: ${{ github.workspace }}/node_modules/@deepseek-ai/dsh/lib/bin.js
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm pack --dry-run
+      - name: Check whether this version already exists
+        id: registry
+        shell: bash
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          if npm view "${package_name}@${{ steps.release.outputs.version }}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Use an OIDC-capable npm CLI
+        if: steps.registry.outputs.exists != 'true'
+        run: npm install --global "npm@^11.5.1"
+      - name: Publish to npm
+        if: steps.registry.outputs.exists != 'true'
+        run: npm publish --provenance --access public --tag "${{ steps.release.outputs.npm_tag }}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify the published dist-tag
+        shell: bash
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          expected_version="${{ steps.release.outputs.version }}"
+          npm_tag="${{ steps.release.outputs.npm_tag }}"
+          for attempt in {1..12}; do
+            actual_version="$(npm view "${package_name}@${npm_tag}" version 2>/dev/null || true)"
+            if [[ "${actual_version}" == "${expected_version}" ]]; then
+              echo "${package_name}@${npm_tag} resolves to ${actual_version}"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: expected ${expected_version}, observed ${actual_version:-<missing>}"
+            sleep 5
+          done
+          echo "${package_name}@${npm_tag} did not resolve to ${expected_version}" >&2
+          exit 1

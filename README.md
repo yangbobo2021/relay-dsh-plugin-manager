@@ -94,6 +94,8 @@ and the real `relay-dsh-plugin-codex` package. The RC dry run uses npm's
 [docs/acceptance.md](./docs/acceptance.md) for the release contract and
 traceability matrix. The current real-session release record is
 [docs/acceptance/release-candidate-2026-08-26.md](./docs/acceptance/release-candidate-2026-08-26.md).
+Tag-triggered npm publication is defined in
+[docs/releasing.md](./docs/releasing.md).
 
 ## Repository Boundary
 

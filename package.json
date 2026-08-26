@@ -24,7 +24,7 @@
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "build": "npm run clean && tsdown --config tsdown.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test test/*.test.mjs",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "acceptance:live:codex": "RELAY_LIVE_PLUGIN_ACCEPTANCE=1 vitest run test/live/codex.live.test.ts --reporter=verbose",
