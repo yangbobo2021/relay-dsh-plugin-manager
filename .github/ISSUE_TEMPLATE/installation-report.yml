@@ -1,0 +1,59 @@
+name: Installation report
+description: Report a successful install or a reproducible installation problem.
+title: "[Install]: "
+labels:
+  - installation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Relay DSH Plugin Manager. Do not include tokens, private repository URLs, customer data, or other secrets.
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Installed and working
+        - Installed with a workaround
+        - Installation failed
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: DSH, plugin, and Node.js versions
+      description: For example, DSH 0.1.1-rc.2, plugin 0.1.0-rc.2, Node.js 24.7.0.
+      placeholder: DSH ..., plugin ..., Node.js ...
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Install command
+      description: Paste the exact command after removing private paths or credentials.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+      description: State what you tried, what you observed, and any workaround used.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Optional logs or screenshots. Remove usernames, hostnames, private paths, tokens, and customer data.
