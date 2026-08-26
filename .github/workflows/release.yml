@@ -32,7 +32,7 @@ jobs:
       - name: Require the release commit on main
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
       - name: Install the official DSH CLI for package acceptance
-        run: npm install --ignore-scripts --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
+        run: npm install --legacy-peer-deps --ignore-scripts --no-save --package-lock=false @deepseek-ai/dsh@0.1.1-rc.2
       - name: Verify release package
         run: npm run verify
         env:
