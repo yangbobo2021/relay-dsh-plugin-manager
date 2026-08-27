@@ -69,11 +69,11 @@ disablement, and restart always show a plan and require a later confirmation.
 
 [![Plugin Manager installs relay-dsh-plugin-codex successfully in DSH](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1)
 
-Watch the [38-second real DSH run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1):
+Watch the [40-second real DSH run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1):
 search, planning without changes, separate confirmation, installation, and the
 final `succeeded` status. It was recorded against official DSH commit
 [`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)
-with Plugin Manager `0.1.0-rc.2` and Codex plugin `0.1.2`. DSH reports when a
+with Plugin Manager `0.1.0-rc.3` and Codex plugin `0.1.2`. DSH reports when a
 restart is required after installation.
 
 ## Part of Relay
