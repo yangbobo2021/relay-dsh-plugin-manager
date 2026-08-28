@@ -30,7 +30,7 @@ service.
 | PM-006 | Ship npm and GitHub search providers. Preserve a syntactically valid exact npm package-name query even when npm search ranking omits it. Search results are inspected before being reported as installable DSH plugins. |
 | PM-007 | Accept only core-owned npm and GitHub install-source types. Resolve npm to an exact semantic version with registry integrity and GitHub to a full 40-character commit. |
 | PM-008 | Inspect the resolved package manifest and require a valid package name plus a DSH surface (`dsh.bundle.patch` or `dsh.client`). Search providers cannot bypass this validation. |
-| PM-009 | Every install, multi-install, remove, update, enable, disable, or restart starts with an immutable plan. A later execute call requires the unexpired, one-use confirmation token returned by that plan. The token is bound to the planning DSH Session and cannot execute until that Session contains a newer user message; the original request is mechanically not confirmation. Execution also refuses a stale plan when any target profile dependency changed after planning. |
+| PM-009 | Every install, multi-install, remove, update, enable, disable, or restart starts with an immutable plan and an unexpired, one-use confirmation token bound to the planning DSH Session. A plain `execute` call requires a newer user message in that Session, so the original request is mechanically not confirmation. A `confirm` call may instead ask the user through the controlled UI flow defined by PM-023. Execution also refuses a stale plan when any target profile dependency changed after planning. |
 | PM-010 | Install and update through argv-only invocation of the currently running DSH CLI: `dsh plugin --profile web add --save-exact <immutable-source>`. Never build a shell command string. |
 | PM-011 | Remove through argv-only `dsh plugin --profile web remove <package>`. Verify dependency and bundle postconditions and reconcile a half-removed profile conservatively. |
 | PM-012 | Enable and disable are package-level projections over owned Cordis Loader entries. Persist manager-owned `disabled` overrides in the profile patch, report `mixed` or `unknown` when ownership is not safely reducible, and never disable the manager itself or protected DSH infrastructure. A disable plan warns that conversations using the target plugin may be interrupted. |
@@ -44,6 +44,7 @@ service.
 | PM-020 | Remain independently installable. Do not import Relay parent implementation code or KeySync implementation code. Runtime interactions use DSH/Cordis public services and the official CLI. |
 | PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`. It briefly explains conversation-based discovery and lifecycle management, includes representative search/install/remove/list prompts, and states that mutations wait for confirmation. It exposes no management control, Remote call, or additional Host service. |
 | PM-022 | Preserve required manifest peer-dependency metadata during source inspection while respecting `peerDependenciesMeta.optional`. A multi-install plan reports required peers absent from both the current profile and the requested set, deduplicated with their ranges, dependents, and suggested npm source. Planning never silently adds an unrequested companion plugin. |
+| PM-023 | `plugin_manage confirm` owns its DSH question: it validates the token, expiry, and exact Session before asking; supplies a stable plan-specific id, visible plan detail, exact approve/decline options, and `plan-review` intent; and executes in that same tool call only for the exact single approve answer. Declines, malformed or unrelated answers, provider failure/cancellation, and cross-session attempts do not execute or consume a still-valid plan. Generic model-authored question results are never mutation authority. |
 
 ## Command Grammar
 
@@ -65,11 +66,13 @@ Read-only actions: `list`, `search`, `inspect`, `status`.
 
 ### `plugin_manage`
 
-State-changing workflow actions: `plan`, `execute`, `status`, `cancel`.
+State-changing workflow actions: `plan`, `confirm`, `execute`, `status`, `cancel`.
 `plan` carries one operation from `install`, `remove`, `update`, `enable`,
 `disable`, `restart`, or `install_many`. `install_many` accepts a bounded,
-non-empty `sources` array and returns one ordered aggregate plan. `execute`
-accepts only a confirmation token.
+non-empty `sources` array and returns one ordered aggregate plan. `confirm`
+accepts the token and owns the DSH choice UI plus exact-answer validation.
+`execute` accepts the token after a later explicit chat message. The Agent must
+not wrap a plugin plan in the generic `ask_user_question` tool.
 
 ## Search Extension Contract
 

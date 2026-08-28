@@ -31,6 +31,8 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-023 Settings > Plugins contains one localized Plugin Marketplace tab with search/install/remove/list Chat examples and confirmation guidance; the page has no action control, Host call, or Remote dependency | PM-019, PM-021 | client registration + server-rendered component unit tests + packed client-bundle E2E |
 | A-024 three immutable plugin sources produce one deeply immutable plan and token, execute serially after one confirmation, expose per-child outcomes, stop/skip after failure, cancel without starting later children, and reject duplicates, invalid bounds, or aggregate stale state before mutation | PM-009, PM-010, PM-015, PM-017, PM-018 | plan/operation unit + conversation tool + fake-CLI manager integration |
 | A-025 multi-install planning deduplicates missing peer dependencies, excludes optional peers and peers already installed or requested, suggests but never silently installs companions, and successful operations terminate as `succeeded`, `succeeded_restart_required`, or `waiting_for_manual_restart` according to activation and restart availability | PM-013, PM-015, PM-016, PM-022 | source/plan unit + manager integration + opt-in real Codex/Files/Terminal DSH CLI lifecycle |
+| A-026 a valid Session-bound plan opens one plugin-owned DSH `plan-review` question; no mutation starts before an answer, and the exact single approve answer executes once without a typed chat message | PM-009, PM-023 | conversation state-machine unit + real UserQuestionService integration |
+| A-027 decline, malformed/unrelated/custom answers, provider failure/cancellation, cross-session use, pre-prompt expiry, expiry while waiting, and approval replay never cause an unauthorized mutation; a still-valid rejected plan remains retriable, while later-message `execute` remains supported | PM-009, PM-023 | negative confirmation matrix + manager expiry/replay integration |
 
 ## Test Layers
 
@@ -47,7 +49,8 @@ injected fakes.
 Use temporary profiles and an in-process fake official CLI runner that performs
 the same manifest/bundle changes DSH owns. Exercise real manager orchestration,
 postconditions, rollback, operation polling, cancellation, Loader state, actual
-DSH command/tool registries, and model-tool execution.
+DSH command/tool/user-question registries, controlled confirmation, and
+model-tool execution.
 
 ### E2E
 
