@@ -22,6 +22,45 @@ describe('PM-009 confirmation plans', () => {
     now += 2_000
     expect(() => store.consume(expired.confirmationToken)).toThrow(/expired/)
   })
+
+  it('deeply freezes aggregate install items and includes them in the digest', () => {
+    let sequence = 0
+    const store = new PlanStore({ random: () => `batch-${++sequence}` })
+    const input = {
+      action: 'install_many' as const,
+      profile: 'web' as const,
+      items: [{
+        action: 'install' as const,
+        packageName: 'plugin-a',
+        installSpec: 'plugin-a@1.0.0',
+        impact: 'Install plugin-a.',
+        restartExpected: true,
+      }],
+      missingPeerDependencies: [{
+        packageName: 'plugin-companion',
+        ranges: ['^1.0.0'],
+        requiredBy: ['plugin-a'],
+        suggestedSource: 'plugin-companion',
+      }],
+      impact: 'Install 1 plugin serially.',
+      restartExpected: true,
+    }
+    const plan = store.create(input)
+    input.items[0]!.installSpec = 'plugin-a@9.9.9'
+
+    expect(plan.items[0]!.installSpec).toBe('plugin-a@1.0.0')
+    expect(Object.isFrozen(plan)).toBe(true)
+    expect(Object.isFrozen(plan.items)).toBe(true)
+    expect(Object.isFrozen(plan.items[0])).toBe(true)
+    expect(Object.isFrozen(plan.missingPeerDependencies[0]!.ranges)).toBe(true)
+    expect(() => { plan.items[0]!.installSpec = 'plugin-a@2.0.0' }).toThrow(TypeError)
+
+    const different = store.create({
+      ...input,
+      items: [{ ...input.items[0]!, installSpec: 'plugin-a@2.0.0' }],
+    })
+    expect(different.digest).not.toBe(plan.digest)
+  })
 })
 
 describe('PM-015 tracked operations', () => {

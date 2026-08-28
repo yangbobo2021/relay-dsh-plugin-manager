@@ -34,6 +34,18 @@ export interface PluginInspection {
   description: string | null
   bundlePatch: string | null
   client: boolean
+  peerDependencies: Record<string, string>
+}
+
+function manifestPeerDependencies(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+  const peers = (value as { peerDependencies?: unknown }).peerDependencies
+  if (typeof peers !== 'object' || peers === null || Array.isArray(peers)) return {}
+  return Object.fromEntries(Object.entries(peers).flatMap(([name, range]) => {
+    if (!NPM_NAME.test(name) || typeof range !== 'string') return []
+    const normalized = range.trim()
+    return normalized === '' || normalized.length > 500 ? [] : [[name, normalized]]
+  }))
 }
 
 export interface FetchOptions {
@@ -238,6 +250,7 @@ export async function inspectNpm(source: NpmPluginSource, options: FetchOptions 
       : null,
     bundlePatch: plugin.bundlePatch,
     client: plugin.client,
+    peerDependencies: manifestPeerDependencies(manifest),
   }
 }
 
@@ -286,6 +299,7 @@ export async function inspectGithub(source: GithubPluginSource, options: FetchOp
       : null,
     bundlePatch: plugin.bundlePatch,
     client: plugin.client,
+    peerDependencies: manifestPeerDependencies(manifest),
   }
 }
 

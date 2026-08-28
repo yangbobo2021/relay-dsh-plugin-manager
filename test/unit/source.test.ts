@@ -49,6 +49,12 @@ describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
       version: '1.4.2',
       description: 'Example',
       repository: { url: 'git+https://github.com/example/dsh-example.git' },
+      peerDependencies: {
+        'dsh-companion': ' ^2.0.0 ',
+        'Invalid Package': '^1.0.0',
+        'empty-range': '   ',
+        'wrong-type': 42,
+      },
       dist: { integrity: 'sha512-YWJjZA==' },
       dsh: { bundle: { patch: './cordis.patch.yml' } },
     }))
@@ -59,6 +65,7 @@ describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
       packageName: 'dsh-example',
       repository: 'github.com/example/dsh-example',
       integrity: 'sha512-YWJjZA==',
+      peerDependencies: { 'dsh-companion': '^2.0.0' },
     })
     expect(fetch).toHaveBeenCalledWith(
       'https://registry.npmjs.org/dsh-example/latest',
@@ -73,7 +80,11 @@ describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
       if (url.endsWith('/repos/example/plugin')) return json({ default_branch: 'main' })
       if (url.endsWith('/commits/main')) return json({ sha })
       if (url.includes('raw.githubusercontent.com')) {
-        return json({ name: 'github-plugin', dsh: { bundle: { patch: './cordis.patch.yml' } } })
+        return json({
+          name: 'github-plugin',
+          peerDependencies: { 'github-companion': '^3.0.0' },
+          dsh: { bundle: { patch: './cordis.patch.yml' } },
+        })
       }
       return json({}, 404)
     })
@@ -83,6 +94,7 @@ describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
       packageName: 'github-plugin',
       installSpec: `github:example/plugin#${sha}`,
       commit: sha,
+      peerDependencies: { 'github-companion': '^3.0.0' },
     })
   })
 })

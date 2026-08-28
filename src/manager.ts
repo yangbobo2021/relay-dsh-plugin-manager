@@ -276,6 +276,7 @@ export class PluginManager {
 
   execute(confirmationToken: string): OperationSnapshot {
     const plan = this.plans.consume(confirmationToken)
+    if (plan.action === 'install_many') fail('INVALID_ACTION', 'Multi-install execution is not available yet.')
     const dependencies = readProfileManifest(this.profileDir).dependencies ?? {}
     if (plan.action === 'install' && plan.packageName !== undefined && dependencies[plan.packageName] !== undefined) {
       fail('PLAN_STALE', `${plan.packageName} was installed after this plan was created; create a new plan.`)

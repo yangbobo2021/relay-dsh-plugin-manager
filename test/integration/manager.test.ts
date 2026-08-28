@@ -24,6 +24,7 @@ function inspection(version = VERSION): PluginInspection {
     description: 'fixture plugin',
     bundlePatch: 'cordis.patch.yml',
     client: false,
+    peerDependencies: {},
   }
 }
 
