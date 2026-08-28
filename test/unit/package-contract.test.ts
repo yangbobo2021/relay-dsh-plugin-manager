@@ -23,6 +23,8 @@ describe('PM-019/PM-020 package contract', () => {
     expect(manifest.exports['./client']).toEqual({ default: './lib/client.js' })
     expect(manifest.dependencies).not.toHaveProperty('@deepseek-ai/dsh-webserver')
     expect(manifest.peerDependencies).not.toHaveProperty('@deepseek-ai/dsh-webserver')
+    expect(manifest.peerDependencies['@deepseek-ai/dsh-user-questions']).toBe('>=0.1.1-rc.2 <0.2.0')
+    expect(manifest.peerDependenciesMeta['@deepseek-ai/dsh-user-questions']).toEqual({ optional: true })
     expect(manifest.dsh.client.inject).not.toContain('@deepseek-ai/dsh-api-remotes')
     expect(manifest.files).toContain('README.zh.md')
     expect(manifest.files).not.toContain('keysync-prototype-2026-08-26')

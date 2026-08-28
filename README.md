@@ -64,7 +64,8 @@ You can also use the single `/plugins` command:
 ```
 
 Search and inspection are read-only. Installation, update, removal, enablement,
-disablement, and restart always show a plan and require a later confirmation.
+disablement, and restart always show a plan. You can confirm with DSH's choice
+UI, or explicitly approve in a later Chat message.
 When you request multiple installs together, DSH shows one ordered plan and any
 missing companion peers, waits for one confirmation, and runs the installs in
 sequence. Completed changes that still need restart are reported explicitly as

@@ -2,8 +2,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { CommandInvocation } from '@deepseek-ai/dsh-commands'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import '@deepseek-ai/dsh-user-questions'
 import type { PluginManager } from './manager.ts'
-import type { PlanAction } from './plans.ts'
+import type { ConfirmationPlan, PlanAction } from './plans.ts'
 import { fail } from './errors.ts'
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
@@ -20,14 +21,62 @@ interface ConfirmationCursor {
   sessionId: string
   userMessageSeq: number
   expiresAt: number
+  plan: ConfirmationPlan
 }
 
-function confirmationCursor(execution: ToolRunContext): Omit<ConfirmationCursor, 'expiresAt'> | null {
+const APPROVE_LABEL = 'Approve plugin change'
+const DECLINE_LABEL = 'Decline'
+
+function confirmationCursor(
+  execution: ToolRunContext,
+): Pick<ConfirmationCursor, 'sessionId' | 'userMessageSeq'> | null {
   const session = execution.agent?.session
   if (session === undefined) return null
   let userMessageSeq = -1
   for (const event of session.events) if (event.type === 'user/message') userMessageSeq = event.seq
   return { sessionId: String(session.id), userMessageSeq }
+}
+
+function planDetail(plan: ConfirmationPlan): string {
+  const lines = [
+    `Operation: ${plan.action}`,
+    `Profile: ${plan.profile}`,
+    `Impact: ${plan.impact}`,
+    `Restart expected: ${plan.restartExpected ? 'yes' : 'no'}`,
+  ]
+  if (plan.action === 'install_many') {
+    lines.push('Plugins:')
+    for (const item of plan.items) lines.push(`- ${item.packageName}: ${item.installSpec}`)
+    if (plan.missingPeerDependencies.length > 0) {
+      lines.push('Missing required peer dependencies:')
+      for (const peer of plan.missingPeerDependencies) {
+        lines.push(`- ${peer.packageName} (${peer.ranges.join(', ')}) required by ${peer.requiredBy.join(', ')}`)
+      }
+    }
+  } else {
+    if (plan.packageName !== undefined) lines.push(`Plugin: ${plan.packageName}`)
+    if (plan.installSpec !== undefined) lines.push(`Source: ${plan.installSpec}`)
+    if (plan.currentSource !== undefined) lines.push(`Current source: ${plan.currentSource}`)
+  }
+  return lines.join('\n')
+}
+
+function confirmationBinding(
+  confirmations: Map<string, ConfirmationCursor>,
+  token: string,
+  execution: ToolRunContext,
+  now: number,
+): ConfirmationCursor {
+  const binding = confirmations.get(token)
+  const cursor = confirmationCursor(execution)
+  if (binding === undefined || cursor === null || cursor.sessionId !== binding.sessionId) {
+    fail('CONFIRMATION_REQUIRED', 'Confirmation token is not bound to this DSH conversation.')
+  }
+  if (binding.expiresAt <= now) {
+    confirmations.delete(token)
+    fail('CONFIRMATION_EXPIRED', 'Confirmation token has expired.')
+  }
+  return binding
 }
 
 export function registerConversationSurface(ctx: Context, manager: PluginManager): void {
@@ -55,13 +104,13 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
 
   ctx.tools.register(defineTool({
     name: 'plugin_manage',
-    description: 'Plan and run DSH plugin mutations. ALWAYS call action=plan first and show its impact. NEVER treat the request that produced a plan as confirmation. Only call action=execute with its confirmationToken after a later, explicit user confirmation. Use install_many with sources for one multi-plugin plan and confirmation. Install sources are npm or GitHub; search providers do not define installers.',
+    description: 'Plan and run DSH plugin mutations. ALWAYS call action=plan first and show its impact. NEVER treat the request that produced a plan as confirmation. Prefer action=confirm with its confirmationToken to show the plugin-owned DSH approval UI and execute an exact approval. Alternatively, call action=execute only after a later explicit user Chat message. NEVER wrap a plugin plan in generic ask_user_question. Use install_many with sources for one multi-plugin plan and confirmation. Install sources are npm or GitHub; search providers do not define installers.',
     parameters: {
       action: {
         type: 'string',
-        enum: ['plan', 'execute', 'status', 'cancel'],
+        enum: ['plan', 'confirm', 'execute', 'status', 'cancel'],
         required: true,
-        description: 'Lifecycle stage. Mutations require plan followed by execute.',
+        description: 'Lifecycle stage. Mutations require plan followed by controlled confirm or later-message execute.',
       },
       operation: {
         type: 'string',
@@ -92,16 +141,55 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
         if (cursor === null) fail('CONFIRMATION_REQUIRED', 'Planning requires a DSH Agent session.')
         const now = Date.now()
         for (const [token, binding] of confirmations) if (binding.expiresAt <= now) confirmations.delete(token)
-        confirmations.set(plan.confirmationToken, { ...cursor, expiresAt: Date.parse(plan.expiresAt) })
+        confirmations.set(plan.confirmationToken, {
+          ...cursor,
+          expiresAt: Date.parse(plan.expiresAt),
+          plan,
+        })
         return jsonValue(plan)
+      }
+      if (args.action === 'confirm') {
+        if (args.confirmationToken === undefined) fail('CONFIRMATION_REQUIRED', 'Confirmation requires a token.')
+        const binding = confirmationBinding(confirmations, args.confirmationToken, execution, Date.now())
+        const questionId = `plugin-plan:${binding.plan.id}`
+        const answer = await ctx.userQuestions.ask({
+          questions: [{
+            id: questionId,
+            question: 'Apply this plugin change?',
+            detail: planDetail(binding.plan),
+            header: 'Plugin plan',
+            options: [
+              { label: APPROVE_LABEL, description: 'Apply the exact plan shown above.' },
+              { label: DECLINE_LABEL, description: 'Keep the profile unchanged.' },
+            ],
+            multiSelect: false,
+            intent: { kind: 'plan-review', approve: APPROVE_LABEL },
+          }],
+          ...(execution.agent === undefined ? {} : { agent: execution.agent }),
+          signal: execution.signal,
+        })
+        const answered = answer.answers[0]
+        const isExactAnswer = answer.answers.length === 1
+          && answered?.id === questionId
+          && answered.custom === undefined
+          && answered.selected.length === 1
+        if (!isExactAnswer) {
+          fail('CONFIRMATION_INVALID', 'Plugin confirmation did not match the requested plan and was not executed.')
+        }
+        if (answered.selected[0] === DECLINE_LABEL) {
+          return jsonValue({ status: 'declined', planId: binding.plan.id })
+        }
+        if (answered.selected[0] !== APPROVE_LABEL) {
+          fail('CONFIRMATION_INVALID', 'Plugin confirmation used an unknown choice and was not executed.')
+        }
+        confirmations.delete(args.confirmationToken)
+        return jsonValue(manager.execute(args.confirmationToken))
       }
       if (args.action === 'execute') {
         if (args.confirmationToken === undefined) fail('CONFIRMATION_REQUIRED', 'Execution requires a confirmation token.')
-        const binding = confirmations.get(args.confirmationToken)
+        const binding = confirmationBinding(confirmations, args.confirmationToken, execution, Date.now())
         const cursor = confirmationCursor(execution)
-        if (binding === undefined || cursor === null || cursor.sessionId !== binding.sessionId) {
-          fail('CONFIRMATION_REQUIRED', 'Confirmation token is not bound to this DSH conversation.')
-        }
+        if (cursor === null) fail('CONFIRMATION_REQUIRED', 'Execution requires a DSH Agent session.')
         if (cursor.userMessageSeq <= binding.userMessageSeq) {
           fail('CONFIRMATION_REQUIRED', 'Wait for a later explicit user confirmation before execution.')
         }

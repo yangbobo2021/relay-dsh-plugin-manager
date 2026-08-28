@@ -6,6 +6,8 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- Plugin-owned DSH choice confirmation that validates the exact plan answer and
+  executes without requiring a duplicate typed confirmation.
 - One-plan, one-confirmation multi-plugin installation with serial child
   outcomes and required peer-dependency preflight.
 - Explicit restart-required and manual-restart operation terminal states.

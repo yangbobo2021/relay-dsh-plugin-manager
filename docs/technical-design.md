@@ -48,11 +48,23 @@ Two model tools are sufficient:
 - management separates planning from execution and also owns operation status
   and cancellation.
 
-The tool descriptions instruct the model to show a plan and wait for a later
-affirmative user message before calling `execute`. The conversation adapter
-also binds each token to the Agent Session and its latest `user/message` seq at
-planning time. Same-turn and cross-session execution fail before the manager
+The tool descriptions instruct the model to show a plan and then use one of two
+confirmation paths. `confirm` asks through the plugin-owned DSH choice UI and,
+on an exact approval, executes in the same tool call. `execute` remains the
+plain-chat path and requires a later affirmative user message. The conversation
+adapter binds each token to the Agent Session and its latest `user/message` seq
+at planning time. Same-turn and cross-session execution fail before the manager
 can consume the token.
+
+The plugin-owned question has a plan-derived stable id, visible plan detail,
+fixed approve and decline labels, single-selection semantics, and DSH's
+`plan-review` intent. The adapter accepts only one answer with that exact id,
+the exact approve label, and no custom text. It never interprets results from a
+generic, model-authored `ask_user_question` call as mutation authority.
+Declines, malformed answers, provider errors, and cancellation leave a valid
+token retriable. Expiry is checked both before opening UI and atomically by the
+manager when approval returns, covering a plan that expires while the UI is
+open.
 
 ## Source Resolution
 

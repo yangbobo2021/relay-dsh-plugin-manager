@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import '@deepseek-ai/cordis-plugin-loader'
+import '@deepseek-ai/dsh-user-questions'
 import { registerConversationSurface } from './conversation.ts'
 import { HotRuntime } from './hot-runtime.ts'
 import { PluginManager } from './manager.ts'
@@ -9,7 +10,7 @@ import { DshRestarter } from './restart.ts'
 import { DshCliRunner } from './runner.ts'
 
 export const name = 'relay-dsh-plugin-manager'
-export const inject = ['pluginSearch', 'tools', 'commands', 'loader']
+export const inject = ['pluginSearch', 'tools', 'commands', 'userQuestions', 'loader']
 
 export interface Config {
   allowRestart?: boolean
