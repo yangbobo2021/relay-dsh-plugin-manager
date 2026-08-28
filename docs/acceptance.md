@@ -36,6 +36,7 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-028 explicit, natural-language, and conservative bare GitHub owner queries issue an exact owner-qualified search, verify ownership, rank inspected owner plugins ahead of unrelated rows, expose owner/provider/reason metadata, and fall back from an empty inferred hint to keyword search | PM-005, PM-006, PM-024 | query/provider unit + mixed-provider search integration + opt-in live owner search |
 | A-029 `github.com/owner/repo`, canonical HTTPS, and `github:owner/repo` inspect to the same immutable plugin; emitted repository identities round-trip into inspect and recommended sources round-trip into install planning | PM-007, PM-008, PM-024 | source unit + manager integration + opt-in live schemeless inspection |
 | A-030 owner-only inspect forms return actionable search guidance while malformed, unsafe, and non-GitHub inputs remain rejected without weakening source validation | PM-018, PM-024 | source/manager negative unit |
+| A-031 search results feed one immutable multi-install plan through the real DSH tool and user-question registries; no mutation starts before one exact UI approval, then child installs execute serially and approval replay is rejected | PM-002, PM-005, PM-009, PM-010, PM-015, PM-023, PM-024 | combined host/tool/search/question/manager integration |
 
 ## Test Layers
 
@@ -79,6 +80,8 @@ conversation and Loader record is
 [`release-candidate-2026-08-26.md`](./release-candidate-2026-08-26.md). GitHub
 owner discovery and schemeless repository round-trip evidence is recorded in
 [`live-owner-discovery-2026-08-28.md`](./acceptance/live-owner-discovery-2026-08-28.md).
+The cumulative `0.1.0-rc.4` release decision and A-031 evidence are recorded in
+[`release-candidate-0.1.0-rc.4.md`](./acceptance/release-candidate-0.1.0-rc.4.md).
 
 ## Review Gates
 
