@@ -78,6 +78,9 @@ describe('conversation surface', () => {
     const { tools, commands } = surface()
     expect(tools.map(tool => tool.name).sort()).toEqual(['plugin_discover', 'plugin_manage'])
     expect(commands.map(command => command.name)).toEqual(['plugins'])
+    const discover = tools.find(tool => tool.name === 'plugin_discover')!
+    expect(discover.description).toContain('owner:NAME')
+    expect(discover.description).toContain('passed directly to inspect and plan')
     const manage = tools.find(tool => tool.name === 'plugin_manage')!
     expect(manage.description).toContain('plugin-owned DSH approval UI')
     expect(manage.description).toContain('NEVER wrap a plugin plan in generic ask_user_question')

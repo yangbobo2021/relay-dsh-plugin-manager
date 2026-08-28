@@ -26,9 +26,9 @@ service.
 | PM-002 | Keep the model surface compact: one discovery tool and one management tool. Natural-language and slash-command requests use these tools. |
 | PM-003 | List profile dependencies with installed source, bundle membership, package-level enablement, runtime phase, and pending-restart state. |
 | PM-004 | Provide a versioned `ctx.pluginSearch` registry. Other installed plugins may register abortable search providers. Providers discover candidates only and cannot install or mutate the profile. |
-| PM-005 | Search all registered providers concurrently with bounded results, timeout/cancellation, provenance, provider-error isolation, and repository/package-identity deduplication. |
-| PM-006 | Ship npm and GitHub search providers. Preserve a syntactically valid exact npm package-name query even when npm search ranking omits it. Search results are inspected before being reported as installable DSH plugins. |
-| PM-007 | Accept only core-owned npm and GitHub install-source types. Resolve npm to an exact semantic version with registry integrity and GitHub to a full 40-character commit. |
+| PM-005 | Search all registered providers concurrently with bounded results, timeout/cancellation, provenance, provider-error isolation, and repository/package-identity deduplication. Exact typed intent matches sort before unrelated provider-local ranks. Results expose repository owner, aggregate providers, and bounded match reasons. |
+| PM-006 | Ship npm and GitHub search providers. Preserve a syntactically valid exact npm package-name query even when npm search ranking omits it. Support explicit GitHub owner queries and conservative inferred bare-owner hints; inferred hints with no owned DSH repositories fall back to ordinary GitHub keyword search. Search results are inspected before being reported as installable DSH plugins. |
+| PM-007 | Accept only core-owned npm and GitHub install-source types. GitHub repositories accept `github:owner/repo`, `https://github.com/owner/repo`, and the emitted identity `github.com/owner/repo`. Resolve npm to an exact semantic version with registry integrity and GitHub to a full 40-character commit. |
 | PM-008 | Inspect the resolved package manifest and require a valid package name plus a DSH surface (`dsh.bundle.patch` or `dsh.client`). Search providers cannot bypass this validation. |
 | PM-009 | Every install, multi-install, remove, update, enable, disable, or restart starts with an immutable plan and an unexpired, one-use confirmation token bound to the planning DSH Session. A plain `execute` call requires a newer user message in that Session, so the original request is mechanically not confirmation. A `confirm` call may instead ask the user through the controlled UI flow defined by PM-023. Execution also refuses a stale plan when any target profile dependency changed after planning. |
 | PM-010 | Install and update through argv-only invocation of the currently running DSH CLI: `dsh plugin --profile web add --save-exact <immutable-source>`. Never build a shell command string. |
@@ -45,6 +45,7 @@ service.
 | PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`. It briefly explains conversation-based discovery and lifecycle management, includes representative search/install/remove/list prompts, and states that mutations wait for confirmation. It exposes no management control, Remote call, or additional Host service. |
 | PM-022 | Preserve required manifest peer-dependency metadata during source inspection while respecting `peerDependenciesMeta.optional`. A multi-install plan reports required peers absent from both the current profile and the requested set, deduplicated with their ranges, dependents, and suggested npm source. Planning never silently adds an unrequested companion plugin. |
 | PM-023 | `plugin_manage confirm` owns its DSH question: it validates the token, expiry, and exact Session before asking; supplies a stable plan-specific id, visible plan detail, exact approve/decline options, and `plan-review` intent; and executes in that same tool call only for the exact single approve answer. Declines, malformed or unrelated answers, provider failure/cancellation, and cross-session attempts do not execute or consume a still-valid plan. Generic model-authored question results are never mutation authority. |
+| PM-024 | GitHub owner discovery recognizes `owner:<name>`, owner-only GitHub identities, `<name> DSH plugins`, and conservative bare identifiers containing digits. It sends a typed owner intent to providers, uses GitHub's exact owner qualifier, case-insensitively verifies returned ownership, and ranks verified owner matches first. Owner-only `inspect` fails with an actionable error directing callers to search. Every emitted repository identity is accepted by `inspect`; every recommended immutable source is accepted by `plan`. |
 
 ## Command Grammar
 
@@ -63,6 +64,11 @@ behavior drift between direct commands and conversation.
 ### `plugin_discover`
 
 Read-only actions: `list`, `search`, `inspect`, `status`.
+
+`search` accepts capability text or GitHub owner forms such as
+`owner:yangbobo2021`. `inspect` accepts npm sources and all three GitHub
+repository forms from PM-007. An owner without a repository belongs to
+`search`, not `inspect`.
 
 ### `plugin_manage`
 

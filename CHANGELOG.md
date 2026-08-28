@@ -6,6 +6,8 @@ All notable changes to this project are documented here.
 
 ### Added
 
+- GitHub owner discovery with exact-owner ranking, actionable owner-only inspect
+  errors, and round-trippable repository identities.
 - Plugin-owned DSH choice confirmation that validates the exact plan answer and
   executes without requiring a duplicate typed confirmation.
 - One-plan, one-confirmation multi-plugin installation with serial child

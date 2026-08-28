@@ -30,6 +30,20 @@ describe('PM-007/PM-008/PM-018/PM-022 source parsing and inspection', () => {
     expect(parseGithubSpec('https://github.com/owner/repo/tree/release')).toEqual({
       kind: 'github', owner: 'owner', repo: 'repo', ref: 'release',
     })
+    expect(parseGithubSpec('github.com/owner/repo')).toEqual({
+      kind: 'github', owner: 'owner', repo: 'repo',
+    })
+    for (const ownerOnly of ['github:owner', 'github.com/owner', 'https://github.com/owner']) {
+      try {
+        parseGithubSpec(ownerOnly)
+        expect.fail('owner-only source should fail')
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: 'GITHUB_OWNER_REQUIRES_SEARCH',
+          message: expect.stringContaining('action=search with query owner:owner'),
+        })
+      }
+    }
     expect(() => parseGithubSpec('https://example.com/owner/repo')).toThrow(/github\.com/)
     expect(() => parseGithubSpec('github:owner/repo#main;whoami')).toThrow(/safe npm or GitHub token/)
     expect(() => parseGithubSpec('github:owner/repo#main', true)).toThrow(/full GitHub commit/)
@@ -91,8 +105,9 @@ describe('PM-007/PM-008/PM-018/PM-022 source parsing and inspection', () => {
       return json({}, 404)
     })
 
-    await expect(inspectPluginSource('github:example/plugin', { fetch })).resolves.toMatchObject({
+    await expect(inspectPluginSource('github.com/example/plugin', { fetch })).resolves.toMatchObject({
       sourceType: 'github',
+      requestedSpec: 'github:example/plugin',
       packageName: 'github-plugin',
       installSpec: `github:example/plugin#${sha}`,
       commit: sha,

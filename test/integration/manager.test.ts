@@ -139,6 +139,31 @@ function manager(
 }
 
 describe('PluginManager official-command integration', () => {
+  it('A-029 passes emitted repository identities to inspect and recommended sources to plan', async () => {
+    const dir = await fixture()
+    cleanup.push(dir)
+    const inspect = vi.fn(async () => inspection())
+    const subject = manager(dir, vi.fn(), { inspect })
+
+    await expect(subject.discover({
+      action: 'inspect', target: 'github.com/example/example-dsh-plugin',
+    })).resolves.toMatchObject({ packageName: PACKAGE })
+    const plan = await subject.plan({ operation: 'install', source: INSTALL_SPEC })
+
+    expect(inspect).toHaveBeenNthCalledWith(
+      1,
+      'github.com/example/example-dsh-plugin',
+      expect.objectContaining({ signal: undefined }),
+    )
+    expect(inspect).toHaveBeenNthCalledWith(
+      2,
+      INSTALL_SPEC,
+      expect.objectContaining({ signal: undefined }),
+    )
+    expect(plan).toMatchObject({ action: 'install', installSpec: INSTALL_SPEC })
+    expect(readProfileManifest(dir).dependencies).toEqual({})
+  })
+
   it('plans without mutation, then installs exactly once after token confirmation', async () => {
     const dir = await fixture()
     cleanup.push(dir)

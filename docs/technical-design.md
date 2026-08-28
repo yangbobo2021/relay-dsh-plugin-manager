@@ -99,6 +99,20 @@ candidate when the registry search ranking omits it. This is not trusted as an
 installation result: the same core registry metadata, integrity, manifest, and
 DSH-surface inspection still runs before it can be returned.
 
+The query parser also recognizes explicit GitHub owner forms and conservative
+bare-owner hints. A typed owner intent reaches the GitHub provider, which uses
+`user:<owner> topic:dsh-plugin`, verifies every returned `full_name` owner, and
+marks exact matches structurally. Inferred bare hints fall back to the ordinary
+keyword query when the owner search returns no repositories. Exact typed
+matches sort before provider-local rank; local scores remain incomparable.
+
+Search results expose the canonical repository owner, aggregate provider ids,
+and bounded match reasons in addition to per-source provenance. The emitted
+`github.com/owner/repo` identity is itself an accepted source, so it can flow
+directly into `inspect`; `recommendedSource` is immutable and can flow directly
+into `plan`. Owner-only identities fail inspection with guidance to use owner
+search instead of falling through to npm validation.
+
 No provider callback participates after discovery.
 
 ## Confirmation Plans

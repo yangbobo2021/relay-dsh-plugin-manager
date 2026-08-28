@@ -93,25 +93,39 @@ export function parseNpmSpec(value: unknown, requireExact = false): NpmPluginSou
   return { kind: 'npm', package: packageName, ...(version === undefined ? {} : { version }) }
 }
 
-function validGithubPart(value: string): boolean {
+export function isGithubPart(value: string): boolean {
   return GITHUB_PART.test(value) && value !== '.' && value !== '..' && !value.endsWith('.git')
+}
+
+function ownerOnlyGithubSpec(spec: string): string | null {
+  const match = /^(?:github:|(?:https:\/\/)?github\.com\/)([^/#]+)\/?$/u.exec(spec)
+  return match !== null && isGithubPart(match[1]!) ? match[1]! : null
 }
 
 export function parseGithubSpec(value: unknown, requireCommit = false): GithubPluginSource | null {
   const spec = safeToken(value)
+  const ownerOnly = ownerOnlyGithubSpec(spec)
+  if (ownerOnly !== null) {
+    fail(
+      'GITHUB_OWNER_REQUIRES_SEARCH',
+      `GitHub owner discovery requires action=search with query owner:${ownerOnly}.`,
+      { owner: ownerOnly },
+    )
+  }
+  const normalizedSpec = spec.startsWith('github.com/') ? `https://${spec}` : spec
   let owner: string | undefined
   let repo: string | undefined
   let ref: string | undefined
-  if (spec.startsWith('github:')) {
-    const match = /^github:([^/]+)\/([^#]+?)(?:#(.+))?$/u.exec(spec)
+  if (normalizedSpec.startsWith('github:')) {
+    const match = /^github:([^/]+)\/([^#]+?)(?:#(.+))?$/u.exec(normalizedSpec)
     if (match === null) fail('INVALID_GITHUB_SPEC', 'GitHub source must use github:owner/repo[#ref].')
     owner = match[1]
     repo = match[2]
     ref = match[3]
-  } else if (spec.startsWith('https://github.com/')) {
+  } else if (normalizedSpec.startsWith('https://github.com/')) {
     let url: URL
     try {
-      url = new URL(spec)
+      url = new URL(normalizedSpec)
     } catch {
       fail('INVALID_GITHUB_SPEC', 'GitHub URL is invalid.')
     }
@@ -129,12 +143,12 @@ export function parseGithubSpec(value: unknown, requireCommit = false): GithubPl
     } else if (url.hash !== '') {
       fail('INVALID_GITHUB_SPEC', 'Use a tree/commit URL or github:owner/repo#ref for GitHub refs.')
     }
-  } else if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//u.test(spec)) {
+  } else if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//u.test(normalizedSpec)) {
     fail('INVALID_GITHUB_SPEC', 'Only canonical HTTPS github.com repository URLs are supported.')
   } else {
     return null
   }
-  if (!validGithubPart(owner ?? '') || !validGithubPart(repo ?? '')) {
+  if (!isGithubPart(owner ?? '') || !isGithubPart(repo ?? '')) {
     fail('INVALID_GITHUB_SPEC', 'GitHub owner or repository name is invalid.')
   }
   if (ref !== undefined && (ref === '' || ref.length > 200 || UNSAFE_TOKEN.test(ref))) {

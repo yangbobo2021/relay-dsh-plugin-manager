@@ -46,6 +46,7 @@ Chat 对话中完成。
 
 ```text
 找一个能连接飞书的插件
+查找 GitHub 用户 yangbobo2021 发布的 DSH 插件
 安装 relay-dsh-plugin-codex
 一起安装 relay-dsh-plugin-codex、relay-dsh-plugin-files 和 relay-dsh-plugin-terminal
 列出已安装插件及其状态
@@ -57,6 +58,7 @@ Chat 对话中完成。
 
 ```text
 /plugins 找一个工作区文件浏览插件
+/plugins 搜索 owner:yangbobo2021
 /plugins 安装 relay-dsh-plugin-files
 ```
 

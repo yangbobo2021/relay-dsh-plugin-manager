@@ -6,6 +6,16 @@ export interface PluginSearchRequest {
   query: string
   maxResults: number
   signal: AbortSignal
+  intent?: {
+    kind: 'github-owner'
+    owner: string
+    fallbackToText: boolean
+  }
+}
+
+export interface PluginSearchMatch {
+  kind: 'github-owner'
+  value: string
 }
 
 export interface PluginSearchCandidate {
@@ -17,6 +27,7 @@ export interface PluginSearchCandidate {
   sources: PluginSource[]
   score?: number
   evidence?: string[]
+  match?: PluginSearchMatch
 }
 
 export interface PluginSearchProvider {

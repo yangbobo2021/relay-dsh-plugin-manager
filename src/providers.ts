@@ -58,32 +58,67 @@ export function githubSearchProvider(
     async search(request) {
       const text = query(request.query)
       const token = env.GITHUB_TOKEN ?? env.GH_TOKEN
-      const response = await fetchImpl(
-        `https://api.github.com/search/repositories?q=${encodeURIComponent(`${text} topic:dsh-plugin`)}&per_page=${Math.min(request.maxResults, MAX_PROVIDER_RESULTS)}`,
-        {
-          signal: request.signal,
-          headers: {
-            accept: 'application/vnd.github+json',
-            'user-agent': 'relay-dsh-plugin-manager',
-            'x-github-api-version': '2022-11-28',
-            ...(token === undefined || token === '' ? {} : { authorization: `Bearer ${token}` }),
+      type Repository = {
+        id?: unknown
+        full_name?: unknown
+        description?: unknown
+        html_url?: unknown
+        stargazers_count?: unknown
+      }
+      const search = async (searchText: string): Promise<{ response: Response; items: Repository[] }> => {
+        const response = await fetchImpl(
+          `https://api.github.com/search/repositories?q=${encodeURIComponent(searchText)}&per_page=${Math.min(request.maxResults, MAX_PROVIDER_RESULTS)}`,
+          {
+            signal: request.signal,
+            headers: {
+              accept: 'application/vnd.github+json',
+              'user-agent': 'relay-dsh-plugin-manager',
+              'x-github-api-version': '2022-11-28',
+              ...(token === undefined || token === '' ? {} : { authorization: `Bearer ${token}` }),
+            },
           },
-        },
-      )
-      if (!response.ok) throw new Error(`GitHub search returned HTTP ${response.status}`)
-      const data = await response.json() as { items?: Array<{ id?: unknown; full_name?: unknown; description?: unknown; html_url?: unknown; stargazers_count?: unknown }> }
-      return (data.items ?? []).flatMap((entry) => {
+        )
+        if (!response.ok) return { response, items: [] }
+        const data = await response.json() as { items?: Repository[] }
+        return { response, items: data.items ?? [] }
+      }
+
+      const owner = request.intent?.kind === 'github-owner' ? request.intent.owner : undefined
+      let exactOwner = owner !== undefined
+      let result = await search(owner === undefined
+        ? `${text} topic:dsh-plugin`
+        : `user:${owner} topic:dsh-plugin`)
+      let entries = result.items
+      if (owner !== undefined) {
+        entries = entries.filter(entry => typeof entry.full_name === 'string'
+          && entry.full_name.split('/')[0]?.toLowerCase() === owner.toLowerCase())
+        const shouldFallback = request.intent?.fallbackToText === true
+          && (result.response.status === 422 || (result.response.ok && entries.length === 0))
+        if (shouldFallback) {
+          result = await search(`${text} topic:dsh-plugin`)
+          entries = result.items
+          exactOwner = false
+        }
+      }
+      if (!result.response.ok) throw new Error(`GitHub search returned HTTP ${result.response.status}`)
+
+      return entries.flatMap((entry) => {
         if (typeof entry.full_name !== 'string') return []
-        const [owner, repo, ...extra] = entry.full_name.split('/')
-        if (owner === undefined || repo === undefined || extra.length > 0) return []
+        const [repositoryOwner, repo, ...extra] = entry.full_name.split('/')
+        if (repositoryOwner === undefined || repo === undefined || extra.length > 0) return []
         return [{
           id: `github:${entry.id ?? entry.full_name}`,
           title: entry.full_name,
           ...(typeof entry.description === 'string' ? { description: entry.description } : {}),
           ...(typeof entry.html_url === 'string' ? { homepage: entry.html_url, repository: entry.html_url } : {}),
-          sources: [{ kind: 'github' as const, owner, repo }],
+          sources: [{ kind: 'github' as const, owner: repositoryOwner, repo }],
           ...(typeof entry.stargazers_count === 'number' ? { score: entry.stargazers_count } : {}),
-          evidence: [`GitHub stars: ${String(entry.stargazers_count ?? 0)}`],
+          evidence: [
+            `GitHub repository owner: ${repositoryOwner}`,
+            ...(exactOwner ? [`Exact GitHub owner query: ${owner!}`] : []),
+            `GitHub stars: ${String(entry.stargazers_count ?? 0)}`,
+          ],
+          ...(exactOwner ? { match: { kind: 'github-owner' as const, value: owner! } } : {}),
         }]
       })
     },
