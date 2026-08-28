@@ -78,6 +78,7 @@ export interface MutationResult {
   activated?: boolean
   restartRequired: boolean
   reason?: string
+  nextAction?: string
   command?: { exitCode: number; stdout: string; stderr: string }
   restart?: { helperPid: number | undefined; logFile: string }
 }
@@ -286,6 +287,7 @@ export class PluginManager {
       fail('PLAN_STALE', `${plan.packageName} changed after this plan was created; create a new plan.`)
     }
     const target = plan.packageName ?? 'dsh'
+    const automaticRestartAvailable = this.restarter.available()
     return this.operations.start(plan.action, target, async context => {
       if (plan.action === 'restart') {
         context.progress('scheduling restart')
@@ -295,11 +297,34 @@ export class PluginManager {
       if (plan.packageName === undefined) fail('POSTCONDITION_FAILED', 'Mutation plan has no package name.')
       if (plan.action === 'install' || plan.action === 'update') {
         if (plan.installSpec === undefined) fail('POSTCONDITION_FAILED', 'Install/update plan has no immutable source.')
-        return await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context)
+        return this.withRestartGuidance(
+          await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context),
+          automaticRestartAvailable,
+        )
       }
-      if (plan.action === 'remove') return await this.remove(plan.packageName, context)
-      return await this.toggle(plan.action, plan.packageName, context)
-    })
+      if (plan.action === 'remove') {
+        return this.withRestartGuidance(await this.remove(plan.packageName, context), automaticRestartAvailable)
+      }
+      return this.withRestartGuidance(await this.toggle(plan.action, plan.packageName, context), automaticRestartAvailable)
+    }, result => this.mutationCompletion(result, automaticRestartAvailable))
+  }
+
+  private withRestartGuidance(result: MutationResult, automaticRestartAvailable: boolean): MutationResult {
+    if (!result.restartRequired) return result
+    return {
+      ...result,
+      nextAction: automaticRestartAvailable
+        ? 'Plan and confirm a separate DSH restart to activate this change.'
+        : 'Restart DSH through the deployment supervisor or operator workflow to activate this change.',
+    }
+  }
+
+  private mutationCompletion(
+    result: MutationResult,
+    automaticRestartAvailable: boolean,
+  ): { status: 'succeeded' | 'succeeded_restart_required' | 'waiting_for_manual_restart' } {
+    if (!result.restartRequired) return { status: 'succeeded' }
+    return { status: automaticRestartAvailable ? 'succeeded_restart_required' : 'waiting_for_manual_restart' }
   }
 
   operation(id: string): OperationSnapshot {

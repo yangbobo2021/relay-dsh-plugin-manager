@@ -97,4 +97,27 @@ describe('PM-015 tracked operations', () => {
     await expect(tracker.wait('op-cancel')).resolves.toMatchObject({ status: 'cancelled' })
     expect(observed).toBe(true)
   })
+
+  it('maps completed results to explicit restart-aware terminal states', async () => {
+    let sequence = 0
+    const tracker = new OperationTracker({ random: () => `op-${++sequence}` })
+    const automatic = tracker.start('install', 'plugin-a', async () => ({ restartRequired: true }), () => ({
+      status: 'succeeded_restart_required',
+    }))
+    await expect(tracker.wait(automatic.id)).resolves.toMatchObject({
+      status: 'succeeded_restart_required',
+      result: { restartRequired: true },
+      progress: 'completed',
+    })
+
+    const manual = tracker.start('install', 'plugin-b', async () => ({ restartRequired: true }), () => ({
+      status: 'waiting_for_manual_restart',
+      progress: 'manual restart required',
+    }))
+    await expect(tracker.wait(manual.id)).resolves.toMatchObject({
+      status: 'waiting_for_manual_restart',
+      result: { restartRequired: true },
+      progress: 'manual restart required',
+    })
+  })
 })

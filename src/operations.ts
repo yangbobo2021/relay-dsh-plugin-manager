@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto'
 import { fail } from './errors.ts'
-import type { MutationAction } from './plans.ts'
+import type { PlanAction } from './plans.ts'
 
-export type OperationStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+export type OperationStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'succeeded_restart_required'
+  | 'waiting_for_manual_restart'
+  | 'failed'
+  | 'cancelled'
+
+export type CompletedOperationStatus = Exclude<OperationStatus, 'queued' | 'running' | 'cancelled'>
 
 export interface OperationSnapshot<T = unknown> {
   id: string
-  action: MutationAction
+  action: PlanAction
   target: string
   status: OperationStatus
   progress: string
@@ -27,6 +36,12 @@ export interface OperationContext {
   progress(message: string): void
 }
 
+export interface OperationCompletion {
+  status: CompletedOperationStatus
+  progress?: string
+  error?: { code?: string; message: string }
+}
+
 export class OperationTracker {
   private readonly records = new Map<string, OperationRecord<unknown>>()
   private active: string | null = null
@@ -39,9 +54,10 @@ export class OperationTracker {
   }
 
   start<T>(
-    action: MutationAction,
+    action: PlanAction,
     target: string,
     execute: (context: OperationContext) => Promise<T>,
+    complete: (result: T) => OperationCompletion = () => ({ status: 'succeeded' }),
   ): OperationSnapshot<T> {
     if (this.active !== null) fail('OPERATION_BUSY', `Plugin operation ${this.active} is still running.`)
     const id = this.random()
@@ -65,13 +81,15 @@ export class OperationTracker {
           signal: controller.signal,
           progress: message => { snapshot.progress = message.slice(0, 500) },
         })
+        snapshot.result = result
         if (controller.signal.aborted) {
           snapshot.status = 'cancelled'
           snapshot.progress = 'cancelled'
         } else {
-          snapshot.status = 'succeeded'
-          snapshot.progress = 'completed'
-          snapshot.result = result
+          const completion = complete(result)
+          snapshot.status = completion.status
+          snapshot.progress = completion.progress ?? 'completed'
+          if (completion.error !== undefined) snapshot.error = completion.error
         }
       } catch (error) {
         if (controller.signal.aborted) {

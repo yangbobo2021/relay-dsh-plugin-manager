@@ -61,7 +61,12 @@ function manager(
     timedOut: boolean
     cancelled: boolean
   }>,
-  options: { hotActive?: boolean; dynamicLoader?: boolean; restartAvailable?: boolean } = {},
+  options: {
+    hotActive?: boolean
+    hotRestartRequired?: boolean
+    dynamicLoader?: boolean
+    restartAvailable?: boolean
+  } = {},
 ): PluginManager {
   let hotActive = options.hotActive ?? false
   return new PluginManager({
@@ -72,6 +77,9 @@ function manager(
     hot: {
       isActive: () => hotActive,
       activate: vi.fn(async () => {
+        if (options.hotRestartRequired === true) {
+          return { active: false, restartRequired: true, reason: 'fixture requires restart' }
+        }
         hotActive = true
         return { active: true, restartRequired: false, reason: null }
       }),
@@ -190,7 +198,7 @@ describe('PluginManager official-command integration', () => {
     const completed = await subject.wait(subject.execute(plan.confirmationToken).id)
     expect(runPlugin).toHaveBeenCalledWith('web', ['remove', PACKAGE], expect.any(AbortSignal), expect.any(Function))
     expect(completed).toMatchObject({
-      status: 'succeeded',
+      status: 'succeeded_restart_required',
       result: { action: 'remove', changed: true, restartRequired: true },
     })
     expect(readProfileManifest(dir).dependencies).toEqual({})
@@ -248,7 +256,7 @@ describe('PluginManager official-command integration', () => {
       'web', ['add', '--save-exact', INSTALL_SPEC], expect.any(AbortSignal), expect.any(Function),
     )
     expect(completed).toMatchObject({
-      status: 'succeeded',
+      status: 'succeeded_restart_required',
       result: { action: 'update', restartRequired: true, activated: false },
     })
   })
@@ -272,6 +280,29 @@ describe('PluginManager official-command integration', () => {
     expect(completed).toMatchObject({
       status: 'succeeded',
       result: { action: 'remove', restartRequired: false, activated: false },
+    })
+  })
+
+  it('finishes a completed mutation as waiting for manual restart when automatic restart is unavailable', async () => {
+    const dir = await fixture()
+    cleanup.push(dir)
+    const subject = manager(dir, async () => {
+      materializePlugin(dir)
+      writeProfileManifest(dir, {
+        dependencies: { [PACKAGE]: VERSION },
+        dsh: { profile: { bundles: [PACKAGE] } },
+      })
+      return { exitCode: 0, signal: null, stdout: 'added', stderr: '', timedOut: false, cancelled: false }
+    }, { hotRestartRequired: true, restartAvailable: false })
+
+    const plan = await subject.plan({ operation: 'install', source: PACKAGE })
+    const completed = await subject.wait(subject.execute(plan.confirmationToken).id)
+    expect(completed).toMatchObject({
+      status: 'waiting_for_manual_restart',
+      result: {
+        restartRequired: true,
+        nextAction: expect.stringContaining('operator workflow'),
+      },
     })
   })
 
