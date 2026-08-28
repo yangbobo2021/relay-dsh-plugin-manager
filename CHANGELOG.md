@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- One-plan, one-confirmation multi-plugin installation with serial child
+  outcomes and required peer-dependency preflight.
+- Explicit restart-required and manual-restart operation terminal states.
+
+### Changed
+
+- Confirmed plugin operations now queue in FIFO order instead of failing while
+  another mutation is active.
+
 ## [0.1.0-rc.3] - 2026-08-26
 
 ### Added

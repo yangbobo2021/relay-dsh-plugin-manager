@@ -34,6 +34,27 @@ export interface PluginInspection {
   description: string | null
   bundlePatch: string | null
   client: boolean
+  peerDependencies: Record<string, string>
+}
+
+function manifestPeerDependencies(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+  const manifest = value as { peerDependencies?: unknown; peerDependenciesMeta?: unknown }
+  const peers = manifest.peerDependencies
+  if (typeof peers !== 'object' || peers === null || Array.isArray(peers)) return {}
+  const metadata = typeof manifest.peerDependenciesMeta === 'object'
+    && manifest.peerDependenciesMeta !== null
+    && !Array.isArray(manifest.peerDependenciesMeta)
+    ? manifest.peerDependenciesMeta as Record<string, unknown>
+    : {}
+  return Object.fromEntries(Object.entries(peers).flatMap(([name, range]) => {
+    if (!NPM_NAME.test(name) || typeof range !== 'string') return []
+    const peerMetadata = metadata[name]
+    if (typeof peerMetadata === 'object' && peerMetadata !== null && !Array.isArray(peerMetadata)
+      && (peerMetadata as { optional?: unknown }).optional === true) return []
+    const normalized = range.trim()
+    return normalized === '' || normalized.length > 500 ? [] : [[name, normalized]]
+  }))
 }
 
 export interface FetchOptions {
@@ -238,6 +259,7 @@ export async function inspectNpm(source: NpmPluginSource, options: FetchOptions 
       : null,
     bundlePatch: plugin.bundlePatch,
     client: plugin.client,
+    peerDependencies: manifestPeerDependencies(manifest),
   }
 }
 
@@ -286,6 +308,7 @@ export async function inspectGithub(source: GithubPluginSource, options: FetchOp
       : null,
     bundlePatch: plugin.bundlePatch,
     client: plugin.client,
+    peerDependencies: manifestPeerDependencies(manifest),
   }
 }
 

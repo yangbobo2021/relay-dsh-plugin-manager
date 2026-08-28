@@ -1,12 +1,21 @@
 import { randomUUID } from 'node:crypto'
 import { fail } from './errors.ts'
-import type { MutationAction } from './plans.ts'
+import type { PlanAction } from './plans.ts'
 
-export type OperationStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+export type OperationStatus =
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'succeeded_restart_required'
+  | 'waiting_for_manual_restart'
+  | 'failed'
+  | 'cancelled'
+
+export type CompletedOperationStatus = Exclude<OperationStatus, 'queued' | 'running' | 'cancelled'>
 
 export interface OperationSnapshot<T = unknown> {
   id: string
-  action: MutationAction
+  action: PlanAction
   target: string
   status: OperationStatus
   progress: string
@@ -16,10 +25,13 @@ export interface OperationSnapshot<T = unknown> {
   error?: { code?: string; message: string }
 }
 
-interface OperationRecord<T> {
-  snapshot: OperationSnapshot<T>
+interface OperationRecord {
+  snapshot: OperationSnapshot<unknown>
   controller: AbortController
   done: Promise<void>
+  resolveDone(): void
+  execute(context: OperationContext): Promise<unknown>
+  complete(result: unknown): OperationCompletion
 }
 
 export interface OperationContext {
@@ -27,8 +39,15 @@ export interface OperationContext {
   progress(message: string): void
 }
 
+export interface OperationCompletion {
+  status: CompletedOperationStatus
+  progress?: string
+  error?: { code?: string; message: string }
+}
+
 export class OperationTracker {
-  private readonly records = new Map<string, OperationRecord<unknown>>()
+  private readonly records = new Map<string, OperationRecord>()
+  private readonly queue: string[] = []
   private active: string | null = null
   private readonly random: () => string
   private readonly now: () => number
@@ -39,11 +58,11 @@ export class OperationTracker {
   }
 
   start<T>(
-    action: MutationAction,
+    action: PlanAction,
     target: string,
     execute: (context: OperationContext) => Promise<T>,
+    complete: (result: T) => OperationCompletion = () => ({ status: 'succeeded' }),
   ): OperationSnapshot<T> {
-    if (this.active !== null) fail('OPERATION_BUSY', `Plugin operation ${this.active} is still running.`)
     const id = this.random()
     const controller = new AbortController()
     const snapshot: OperationSnapshot<T> = {
@@ -54,45 +73,73 @@ export class OperationTracker {
       progress: 'queued',
       startedAt: new Date(this.now()).toISOString(),
     }
-    const record: OperationRecord<T> = { snapshot, controller, done: Promise.resolve() }
-    this.records.set(id, record as OperationRecord<unknown>)
-    this.active = id
-    record.done = Promise.resolve().then(async () => {
-      snapshot.status = 'running'
-      snapshot.progress = 'running'
-      try {
-        const result = await execute({
-          signal: controller.signal,
-          progress: message => { snapshot.progress = message.slice(0, 500) },
-        })
-        if (controller.signal.aborted) {
-          snapshot.status = 'cancelled'
-          snapshot.progress = 'cancelled'
-        } else {
-          snapshot.status = 'succeeded'
-          snapshot.progress = 'completed'
-          snapshot.result = result
-        }
-      } catch (error) {
-        if (controller.signal.aborted) {
-          snapshot.status = 'cancelled'
-          snapshot.progress = 'cancelled'
-        } else {
-          snapshot.status = 'failed'
-          snapshot.progress = 'failed'
-          snapshot.error = {
-            ...typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
-              ? { code: error.code }
-              : {},
-            message: error instanceof Error ? error.message : String(error),
-          }
-        }
-      } finally {
-        snapshot.finishedAt = new Date(this.now()).toISOString()
-        if (this.active === id) this.active = null
-      }
-    })
+    let resolveDone!: () => void
+    const record: OperationRecord = {
+      snapshot,
+      controller,
+      done: new Promise<void>(resolve => { resolveDone = resolve }),
+      resolveDone,
+      execute: async context => await execute(context),
+      complete: result => complete(result as T),
+    }
+    this.records.set(id, record)
+    this.queue.push(id)
+    queueMicrotask(() => this.drain())
     return structuredClone(snapshot)
+  }
+
+  private drain(): void {
+    if (this.active !== null) return
+    const id = this.queue.shift()
+    if (id === undefined) return
+    const record = this.records.get(id)
+    if (record === undefined || record.snapshot.status !== 'queued') {
+      queueMicrotask(() => this.drain())
+      return
+    }
+    this.active = id
+    void this.run(id, record)
+  }
+
+  private async run(id: string, record: OperationRecord): Promise<void> {
+    const { snapshot, controller } = record
+    snapshot.status = 'running'
+    snapshot.progress = 'running'
+    try {
+      const result = await record.execute({
+        signal: controller.signal,
+        progress: message => { snapshot.progress = message.slice(0, 500) },
+      })
+      snapshot.result = result
+      if (controller.signal.aborted) {
+        snapshot.status = 'cancelled'
+        snapshot.progress = 'cancelled'
+      } else {
+        const completion = record.complete(result)
+        snapshot.status = completion.status
+        snapshot.progress = completion.progress ?? 'completed'
+        if (completion.error !== undefined) snapshot.error = completion.error
+      }
+    } catch (error) {
+      if (controller.signal.aborted) {
+        snapshot.status = 'cancelled'
+        snapshot.progress = 'cancelled'
+      } else {
+        snapshot.status = 'failed'
+        snapshot.progress = 'failed'
+        snapshot.error = {
+          ...typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+            ? { code: error.code }
+            : {},
+          message: error instanceof Error ? error.message : String(error),
+        }
+      }
+    } finally {
+      snapshot.finishedAt = new Date(this.now()).toISOString()
+      if (this.active === id) this.active = null
+      record.resolveDone()
+      queueMicrotask(() => this.drain())
+    }
   }
 
   get(id: string): OperationSnapshot {
@@ -104,7 +151,15 @@ export class OperationTracker {
   cancel(id: string): OperationSnapshot {
     const record = this.records.get(id)
     if (record === undefined) fail('OPERATION_NOT_FOUND', `Plugin operation ${id} was not found.`)
-    if (record.snapshot.status === 'queued' || record.snapshot.status === 'running') {
+    if (record.snapshot.status === 'queued') {
+      const index = this.queue.indexOf(id)
+      if (index >= 0) this.queue.splice(index, 1)
+      record.controller.abort(new Error('Plugin operation cancelled by user.'))
+      record.snapshot.status = 'cancelled'
+      record.snapshot.progress = 'cancelled'
+      record.snapshot.finishedAt = new Date(this.now()).toISOString()
+      record.resolveDone()
+    } else if (record.snapshot.status === 'running') {
       record.snapshot.progress = 'cancelling'
       record.controller.abort(new Error('Plugin operation cancelled by user.'))
     }

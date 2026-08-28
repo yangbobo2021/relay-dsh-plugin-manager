@@ -32,6 +32,13 @@ export function apply(ctx: Context, config: Config = {}): void {
 }
 
 export { PluginManager } from './manager.ts'
-export type { DiscoverRequest, MutationResult, PlanRequest } from './manager.ts'
+export type {
+  DiscoverRequest,
+  InstallManyItemResult,
+  InstallManyItemStatus,
+  InstallManyResult,
+  MutationResult,
+  PlanRequest,
+} from './manager.ts'
 export type { PluginSearchCandidate, PluginSearchProvider, PluginSearchRequest } from './search-runtime.ts'
 export type { PluginInspection, PluginSource } from './source.ts'

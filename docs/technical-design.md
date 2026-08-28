@@ -91,7 +91,7 @@ No provider callback participates after discovery.
 
 ## Confirmation Plans
 
-Plans live in memory for ten minutes. Each carries:
+Plans live in memory for ten minutes. A single-mutation plan carries:
 
 - operation and profile;
 - package/source and immutable target where applicable;
@@ -105,6 +105,15 @@ compares the planned dependency source with the current profile and refuses a
 stale plan. This prevents confirmation replay, plan substitution, and mutation
 after an out-of-band profile change.
 
+An `install_many` plan contains an ordered, bounded list of the same immutable
+install items under one digest and confirmation token. Nested plan data is
+deeply frozen. Planning resolves every source before creating the plan, rejects
+duplicate package identities, and reports required peer dependencies that are
+absent from both the profile and the requested list. Peers marked optional in
+`peerDependenciesMeta` are excluded. Missing peers are advisory: the manager
+suggests their npm source but does not silently expand the confirmed mutation
+scope.
+
 ## Package Mutations
 
 The runner reuses the current DSH installation. When the current Node entry is
@@ -112,13 +121,27 @@ an existing file, it invokes `process.execPath <current-entry> plugin ...`;
 otherwise it uses explicit `DSH_EXECUTABLE` or the `dsh` command. Arguments are
 always an array. Windows shell fallback is limited to a bare `.cmd` executable.
 
-Only one mutation runs at once. Output is bounded and exposed as progress.
-Cancellation sends SIGTERM and later SIGKILL if needed.
+Only one top-level mutation runs at once. Additional confirmed operations enter
+a FIFO and retain `queued` status instead of failing busy. Plans are checked
+again when they leave the queue so an intervening mutation cannot execute a
+stale target. An `install_many` operation owns one queue slot and invokes child
+installs serially, so child work never competes for the tracker. The batch stops
+on the first child failure, retains earlier successes, and marks later children
+skipped. Output is bounded and exposed as progress. Cancellation removes queued
+work without starting it, or reaches the active child and prevents later
+children from starting.
 
 After add succeeds, the manager verifies the saved immutable dependency, the
 installed package name and exact npm version, a declared DSH surface, and exact
 bundle membership before reporting success. A failed check restores the saved
 profile manifest and reports a failed operation.
+
+Tracked operations have explicit restart-aware terminal states. A successful
+mutation that needs a separately confirmed restart finishes as
+`succeeded_restart_required` when the restarter is available, or
+`waiting_for_manual_restart` when the deployment requires an operator action.
+The mutation itself is complete in both cases; it is never left `running` while
+waiting for restart.
 
 ## Enablement
 

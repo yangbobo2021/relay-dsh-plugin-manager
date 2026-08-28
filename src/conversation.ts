@@ -3,7 +3,7 @@ import type { CommandInvocation } from '@deepseek-ai/dsh-commands'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import type { PluginManager } from './manager.ts'
-import type { MutationAction } from './plans.ts'
+import type { PlanAction } from './plans.ts'
 import { fail } from './errors.ts'
 
 type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
@@ -55,7 +55,7 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
 
   ctx.tools.register(defineTool({
     name: 'plugin_manage',
-    description: 'Plan and run DSH plugin mutations. ALWAYS call action=plan first and show its impact. NEVER treat the request that produced a plan as confirmation. Only call action=execute with its confirmationToken after a later, explicit user confirmation. Install sources are npm or GitHub; search providers do not define installers.',
+    description: 'Plan and run DSH plugin mutations. ALWAYS call action=plan first and show its impact. NEVER treat the request that produced a plan as confirmation. Only call action=execute with its confirmationToken after a later, explicit user confirmation. Use install_many with sources for one multi-plugin plan and confirmation. Install sources are npm or GitHub; search providers do not define installers.',
     parameters: {
       action: {
         type: 'string',
@@ -65,11 +65,16 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
       },
       operation: {
         type: 'string',
-        enum: ['install', 'remove', 'update', 'enable', 'disable', 'restart'],
+        enum: ['install', 'install_many', 'remove', 'update', 'enable', 'disable', 'restart'],
         description: 'Mutation to plan.',
       },
       target: { type: 'string', description: 'Installed package name, or install source when source is omitted.' },
       source: { type: 'string', description: 'npm package/version or canonical GitHub repository/ref.' },
+      sources: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Ordered npm/GitHub sources for operation=install_many (1-20 items).',
+      },
       confirmationToken: { type: 'string', description: 'One-use token from a prior plan.' },
       operationId: { type: 'string', description: 'Tracked operation id.' },
     },
@@ -78,9 +83,10 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
       if (args.action === 'plan') {
         if (args.operation === undefined) fail('INVALID_ACTION', 'Planning requires an operation.')
         const plan = await manager.plan({
-          operation: args.operation as MutationAction,
+          operation: args.operation as PlanAction,
           ...(args.target === undefined ? {} : { target: args.target }),
           ...(args.source === undefined ? {} : { source: args.source }),
+          ...(args.sources === undefined ? {} : { sources: args.sources }),
         }, execution.signal)
         const cursor = confirmationCursor(execution)
         if (cursor === null) fail('CONFIRMATION_REQUIRED', 'Planning requires a DSH Agent session.')

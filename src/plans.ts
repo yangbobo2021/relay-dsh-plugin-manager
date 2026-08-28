@@ -2,8 +2,9 @@ import { createHash, randomUUID } from 'node:crypto'
 import { fail } from './errors.ts'
 
 export type MutationAction = 'install' | 'remove' | 'update' | 'enable' | 'disable' | 'restart'
+export type PlanAction = MutationAction | 'install_many'
 
-export interface PlanInput {
+export interface SinglePlanInput {
   action: MutationAction
   profile: 'web'
   packageName?: string
@@ -11,15 +12,48 @@ export interface PlanInput {
   currentSource?: string
   impact: string
   restartExpected: boolean
+  items?: never
+  missingPeerDependencies?: never
 }
 
-export interface ConfirmationPlan extends PlanInput {
+export interface InstallPlanItem {
+  action: 'install'
+  packageName: string
+  installSpec: string
+  impact: string
+  restartExpected: boolean
+}
+
+export interface MissingPeerDependency {
+  packageName: string
+  ranges: string[]
+  requiredBy: string[]
+  suggestedSource: string
+}
+
+export interface InstallManyPlanInput {
+  action: 'install_many'
+  profile: 'web'
+  items: InstallPlanItem[]
+  missingPeerDependencies: MissingPeerDependency[]
+  impact: string
+  restartExpected: boolean
+  packageName?: never
+  installSpec?: never
+  currentSource?: never
+}
+
+export type PlanInput = SinglePlanInput | InstallManyPlanInput
+
+interface ConfirmationFields {
   id: string
   digest: string
   confirmationToken: string
   createdAt: string
   expiresAt: string
 }
+
+export type ConfirmationPlan<Input extends PlanInput = PlanInput> = Input & ConfirmationFields
 
 export interface PlanStoreOptions {
   now?: () => number
@@ -40,13 +74,14 @@ export class PlanStore {
     this.ttlMs = options.ttlMs ?? 10 * 60_000
   }
 
-  create(input: PlanInput): ConfirmationPlan {
+  create<Input extends PlanInput>(input: Input): ConfirmationPlan<Input> {
     const created = this.now()
     const id = this.random()
     const confirmationToken = this.random()
-    const digest = createHash('sha256').update(JSON.stringify({ id, ...input })).digest('hex')
-    const plan = Object.freeze({
-      ...input,
+    const snapshot = structuredClone(input)
+    const digest = createHash('sha256').update(JSON.stringify({ id, ...snapshot })).digest('hex')
+    const plan = deepFreeze({
+      ...snapshot,
       id,
       digest,
       confirmationToken,
@@ -54,7 +89,7 @@ export class PlanStore {
       expiresAt: new Date(created + this.ttlMs).toISOString(),
     })
     this.plans.set(confirmationToken, plan)
-    return plan
+    return plan as ConfirmationPlan<Input>
   }
 
   consume(token: string): ConfirmationPlan {
@@ -66,4 +101,10 @@ export class PlanStore {
     if (this.now() >= Date.parse(plan.expiresAt)) fail('CONFIRMATION_EXPIRED', 'Confirmation token has expired.')
     return plan
   }
+}
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) return value
+  for (const child of Object.values(value)) deepFreeze(child)
+  return Object.freeze(value)
 }

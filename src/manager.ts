@@ -24,8 +24,20 @@ import {
   type PackageSurface,
   type PluginStatus,
 } from './profile.ts'
-import { PlanStore, type ConfirmationPlan, type MutationAction } from './plans.ts'
-import { OperationTracker, type OperationSnapshot } from './operations.ts'
+import {
+  PlanStore,
+  type ConfirmationPlan,
+  type InstallPlanItem,
+  type MissingPeerDependency,
+  type MutationAction,
+  type PlanAction,
+} from './plans.ts'
+import {
+  OperationTracker,
+  type OperationCompletion,
+  type OperationContext,
+  type OperationSnapshot,
+} from './operations.ts'
 import type { DshCliRunner, RunnerResult } from './runner.ts'
 import type { HotRuntime, HotActivationResult } from './hot-runtime.ts'
 import type { DshRestarter } from './restart.ts'
@@ -65,9 +77,10 @@ export interface DiscoverRequest {
 }
 
 export interface PlanRequest {
-  operation: MutationAction
+  operation: PlanAction
   target?: string
   source?: string
+  sources?: string[]
 }
 
 export interface MutationResult {
@@ -78,9 +91,36 @@ export interface MutationResult {
   activated?: boolean
   restartRequired: boolean
   reason?: string
+  nextAction?: string
   command?: { exitCode: number; stdout: string; stderr: string }
   restart?: { helperPid: number | undefined; logFile: string }
 }
+
+export type InstallManyItemStatus =
+  | 'succeeded'
+  | 'succeeded_restart_required'
+  | 'waiting_for_manual_restart'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped'
+
+export interface InstallManyItemResult {
+  packageName: string
+  installSpec: string
+  status: InstallManyItemStatus
+  result?: MutationResult
+  error?: { code?: string; message: string }
+}
+
+export interface InstallManyResult {
+  action: 'install_many'
+  changed: boolean
+  restartRequired: boolean
+  nextAction?: string
+  items: InstallManyItemResult[]
+}
+
+const MAX_INSTALL_MANY_SOURCES = 20
 
 const FIBER_PHASE: Record<number, string | null> = {
   0: 'pending',
@@ -108,6 +148,15 @@ function safePackageName(value: string | undefined): string {
 
 function commandResult(result: RunnerResult): MutationResult['command'] {
   return { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr }
+}
+
+function operationError(error: unknown): { code?: string; message: string } {
+  return {
+    ...typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? { code: error.code }
+      : {},
+    message: error instanceof Error ? error.message : String(error),
+  }
 }
 
 function installedPackageManifest(profileDir: string, packageName: string): { name?: unknown; version?: unknown } | null {
@@ -225,6 +274,7 @@ export class PluginManager {
   }
 
   async plan(request: PlanRequest, signal?: AbortSignal): Promise<ConfirmationPlan> {
+    if (request.operation === 'install_many') return await this.planInstallMany(request.sources, signal)
     if (request.operation === 'restart') {
       if (!this.restarter.available()) fail('RESTART_UNAVAILABLE', 'Automatic restart is unavailable in this deployment.')
       return this.plans.create({
@@ -274,18 +324,77 @@ export class PluginManager {
     })
   }
 
+  private async planInstallMany(sources: string[] | undefined, signal?: AbortSignal): Promise<ConfirmationPlan> {
+    if (sources === undefined || sources.length === 0 || sources.length > MAX_INSTALL_MANY_SOURCES) {
+      fail('INVALID_BATCH', `Multi-install requires between 1 and ${MAX_INSTALL_MANY_SOURCES} sources.`)
+    }
+    const inspections = await Promise.all(sources.map(source => this.inspect(source, { ...this.fetchOptions, signal })))
+    const profileDependencies = readProfileManifest(this.profileDir).dependencies ?? {}
+    const requestedPackages = new Set<string>()
+    for (const inspection of inspections) {
+      if (requestedPackages.has(inspection.packageName)) {
+        fail('INVALID_BATCH', `Multi-install resolves more than one source to ${inspection.packageName}.`)
+      }
+      if (profileDependencies[inspection.packageName] !== undefined) {
+        fail('PLUGIN_ALREADY_INSTALLED', `${inspection.packageName} is already installed; use update.`)
+      }
+      requestedPackages.add(inspection.packageName)
+    }
+
+    const missing = new Map<string, { ranges: Set<string>; requiredBy: Set<string> }>()
+    for (const inspection of inspections) {
+      for (const [packageName, range] of Object.entries(inspection.peerDependencies)) {
+        if (profileDependencies[packageName] !== undefined || requestedPackages.has(packageName)) continue
+        const entry = missing.get(packageName) ?? { ranges: new Set<string>(), requiredBy: new Set<string>() }
+        entry.ranges.add(range)
+        entry.requiredBy.add(inspection.packageName)
+        missing.set(packageName, entry)
+      }
+    }
+    const missingPeerDependencies: MissingPeerDependency[] = [...missing]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([packageName, entry]) => ({
+        packageName,
+        ranges: [...entry.ranges].sort(),
+        requiredBy: [...entry.requiredBy].sort(),
+        suggestedSource: packageName,
+      }))
+    const items: InstallPlanItem[] = inspections.map(inspection => ({
+      action: 'install',
+      packageName: inspection.packageName,
+      installSpec: inspection.installSpec,
+      impact: `Install ${inspection.packageName} from ${inspection.installSpec}.`,
+      restartExpected: inspection.bundlePatch !== null,
+    }))
+    return this.plans.create({
+      action: 'install_many',
+      profile: 'web',
+      items,
+      missingPeerDependencies,
+      impact: `Install ${items.length} plugins serially: ${items.map(item => item.packageName).join(', ')}.`,
+      restartExpected: items.some(item => item.restartExpected),
+    })
+  }
+
   execute(confirmationToken: string): OperationSnapshot {
     const plan = this.plans.consume(confirmationToken)
-    const dependencies = readProfileManifest(this.profileDir).dependencies ?? {}
-    if (plan.action === 'install' && plan.packageName !== undefined && dependencies[plan.packageName] !== undefined) {
-      fail('PLAN_STALE', `${plan.packageName} was installed after this plan was created; create a new plan.`)
-    }
-    if (plan.action !== 'install' && plan.action !== 'restart' && plan.packageName !== undefined
-      && dependencies[plan.packageName] !== plan.currentSource) {
-      fail('PLAN_STALE', `${plan.packageName} changed after this plan was created; create a new plan.`)
+    this.assertPlanFresh(plan)
+    if (plan.action === 'install_many') {
+      const automaticRestartAvailable = this.restarter.available()
+      return this.operations.start(
+        'install_many',
+        `${plan.items.length} plugins`,
+        async context => {
+          this.assertPlanFresh(plan)
+          return await this.installMany(plan.items, context, automaticRestartAvailable)
+        },
+        result => this.batchCompletion(result, automaticRestartAvailable),
+      )
     }
     const target = plan.packageName ?? 'dsh'
+    const automaticRestartAvailable = this.restarter.available()
     return this.operations.start(plan.action, target, async context => {
+      this.assertPlanFresh(plan)
       if (plan.action === 'restart') {
         context.progress('scheduling restart')
         const restart = this.restarter.schedule()
@@ -294,11 +403,134 @@ export class PluginManager {
       if (plan.packageName === undefined) fail('POSTCONDITION_FAILED', 'Mutation plan has no package name.')
       if (plan.action === 'install' || plan.action === 'update') {
         if (plan.installSpec === undefined) fail('POSTCONDITION_FAILED', 'Install/update plan has no immutable source.')
-        return await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context)
+        return this.withRestartGuidance(
+          await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context),
+          automaticRestartAvailable,
+        )
       }
-      if (plan.action === 'remove') return await this.remove(plan.packageName, context)
-      return await this.toggle(plan.action, plan.packageName, context)
-    })
+      if (plan.action === 'remove') {
+        return this.withRestartGuidance(await this.remove(plan.packageName, context), automaticRestartAvailable)
+      }
+      return this.withRestartGuidance(await this.toggle(plan.action, plan.packageName, context), automaticRestartAvailable)
+    }, result => this.mutationCompletion(result, automaticRestartAvailable))
+  }
+
+  private assertPlanFresh(plan: ConfirmationPlan): void {
+    const dependencies = readProfileManifest(this.profileDir).dependencies ?? {}
+    if (plan.action === 'install_many') {
+      for (const item of plan.items) {
+        if (dependencies[item.packageName] !== undefined) {
+          fail('PLAN_STALE', `${item.packageName} was installed after this plan was created; create a new plan.`)
+        }
+      }
+      return
+    }
+    if (plan.action === 'install' && plan.packageName !== undefined && dependencies[plan.packageName] !== undefined) {
+      fail('PLAN_STALE', `${plan.packageName} was installed after this plan was created; create a new plan.`)
+    }
+    if (plan.action !== 'install' && plan.action !== 'restart' && plan.packageName !== undefined
+      && dependencies[plan.packageName] !== plan.currentSource) {
+      fail('PLAN_STALE', `${plan.packageName} changed after this plan was created; create a new plan.`)
+    }
+  }
+
+  private withRestartGuidance<Result extends { restartRequired: boolean; nextAction?: string }>(
+    result: Result,
+    automaticRestartAvailable: boolean,
+  ): Result {
+    if (!result.restartRequired) return result
+    return {
+      ...result,
+      nextAction: automaticRestartAvailable
+        ? 'Plan and confirm a separate DSH restart to activate this change.'
+        : 'Restart DSH through the deployment supervisor or operator workflow to activate this change.',
+    }
+  }
+
+  private mutationCompletion(
+    result: { restartRequired: boolean },
+    automaticRestartAvailable: boolean,
+  ): { status: 'succeeded' | 'succeeded_restart_required' | 'waiting_for_manual_restart' } {
+    if (!result.restartRequired) return { status: 'succeeded' }
+    return { status: automaticRestartAvailable ? 'succeeded_restart_required' : 'waiting_for_manual_restart' }
+  }
+
+  private async installMany(
+    items: readonly InstallPlanItem[],
+    context: OperationContext,
+    automaticRestartAvailable: boolean,
+  ): Promise<InstallManyResult> {
+    const results: InstallManyItemResult[] = []
+    const skipRemaining = (start: number): void => {
+      for (const item of items.slice(start)) {
+        results.push({
+          packageName: item.packageName,
+          installSpec: item.installSpec,
+          status: 'skipped',
+          error: { message: 'Skipped because an earlier batch item did not complete.' },
+        })
+      }
+    }
+
+    for (const [index, item] of items.entries()) {
+      if (context.signal.aborted) {
+        results.push({
+          packageName: item.packageName,
+          installSpec: item.installSpec,
+          status: 'cancelled',
+          error: { message: 'Batch cancelled before this item started.' },
+        })
+        skipRemaining(index + 1)
+        break
+      }
+      context.progress(`install_many: ${index + 1}/${items.length} installing ${item.packageName}`)
+      try {
+        const result = this.withRestartGuidance(
+          await this.installOrUpdate('install', item.packageName, item.installSpec, context),
+          automaticRestartAvailable,
+        )
+        results.push({
+          packageName: item.packageName,
+          installSpec: item.installSpec,
+          status: this.mutationCompletion(result, automaticRestartAvailable).status,
+          result,
+        })
+      } catch (error) {
+        results.push({
+          packageName: item.packageName,
+          installSpec: item.installSpec,
+          status: context.signal.aborted ? 'cancelled' : 'failed',
+          error: operationError(error),
+        })
+        skipRemaining(index + 1)
+        break
+      }
+    }
+    const result: InstallManyResult = {
+      action: 'install_many',
+      changed: results.some(item => item.result?.changed === true),
+      restartRequired: results.some(item => item.result?.restartRequired === true),
+      items: results,
+    }
+    return this.withRestartGuidance(result, automaticRestartAvailable)
+  }
+
+  private batchCompletion(
+    result: InstallManyResult,
+    automaticRestartAvailable: boolean,
+  ): OperationCompletion {
+    const failed = result.items.find(item => item.status === 'failed')
+    if (failed !== undefined) {
+      return {
+        status: 'failed',
+        progress: `failed at ${failed.packageName}`,
+        error: {
+          code: 'BATCH_INSTALL_FAILED',
+          message: `${failed.packageName} failed: ${failed.error?.message ?? 'unknown error'}`,
+        },
+      }
+    }
+    return this.mutationCompletion(result, automaticRestartAvailable)
   }
 
   operation(id: string): OperationSnapshot {

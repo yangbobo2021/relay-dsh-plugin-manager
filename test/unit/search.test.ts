@@ -9,14 +9,14 @@ function inspection(source: PluginSource): PluginInspection {
       source: { ...source, version: '1.0.0' }, sourceType: 'npm', requestedSpec: source.package,
       installSpec: `${source.package}@1.0.0`, packageName: source.package, version: '1.0.0',
       integrity: 'sha512-YQ==', repository: 'github.com/example/shared', description: 'shared',
-      bundlePatch: './cordis.patch.yml', client: false,
+      bundlePatch: './cordis.patch.yml', client: false, peerDependencies: {},
     }
   }
   return {
     source: { ...source, ref: 'a'.repeat(40) }, sourceType: 'github', requestedSpec: `github:${source.owner}/${source.repo}`,
     installSpec: `github:${source.owner}/${source.repo}#${'a'.repeat(40)}`, packageName: 'shared-plugin',
     commit: 'a'.repeat(40), repository: 'github.com/example/shared', description: 'shared',
-    bundlePatch: './cordis.patch.yml', client: false,
+    bundlePatch: './cordis.patch.yml', client: false, peerDependencies: {},
   }
 }
 

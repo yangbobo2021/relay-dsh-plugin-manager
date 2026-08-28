@@ -30,19 +30,20 @@ service.
 | PM-006 | Ship npm and GitHub search providers. Preserve a syntactically valid exact npm package-name query even when npm search ranking omits it. Search results are inspected before being reported as installable DSH plugins. |
 | PM-007 | Accept only core-owned npm and GitHub install-source types. Resolve npm to an exact semantic version with registry integrity and GitHub to a full 40-character commit. |
 | PM-008 | Inspect the resolved package manifest and require a valid package name plus a DSH surface (`dsh.bundle.patch` or `dsh.client`). Search providers cannot bypass this validation. |
-| PM-009 | Every install, remove, update, enable, disable, or restart starts with an immutable plan. A later execute call requires the unexpired, one-use confirmation token returned by that plan. The token is bound to the planning DSH Session and cannot execute until that Session contains a newer user message; the original request is mechanically not confirmation. Execution also refuses a stale plan when the target profile dependency changed after planning. |
+| PM-009 | Every install, multi-install, remove, update, enable, disable, or restart starts with an immutable plan. A later execute call requires the unexpired, one-use confirmation token returned by that plan. The token is bound to the planning DSH Session and cannot execute until that Session contains a newer user message; the original request is mechanically not confirmation. Execution also refuses a stale plan when any target profile dependency changed after planning. |
 | PM-010 | Install and update through argv-only invocation of the currently running DSH CLI: `dsh plugin --profile web add --save-exact <immutable-source>`. Never build a shell command string. |
 | PM-011 | Remove through argv-only `dsh plugin --profile web remove <package>`. Verify dependency and bundle postconditions and reconcile a half-removed profile conservatively. |
 | PM-012 | Enable and disable are package-level projections over owned Cordis Loader entries. Persist manager-owned `disabled` overrides in the profile patch, report `mixed` or `unknown` when ownership is not safely reducible, and never disable the manager itself or protected DSH infrastructure. A disable plan warns that conversations using the target plugin may be interrupted. |
 | PM-013 | Attempt restart-free activation for newly installed client-only packages and bundles whose patches contain only plain insert rows. Attempt live disposal for removals. Otherwise report `restartRequired` with a concrete reason. |
 | PM-014 | Enable/disable changes use Loader HMR and normally require no restart. A failed or unverifiable live transition reports pending restart rather than claiming success. |
-| PM-015 | Mutations run as tracked operations with stable ids, progress snapshots, terminal exit state, cooperative cancellation, and one active mutation at a time. |
+| PM-015 | Mutations run as tracked FIFO operations with stable ids, progress snapshots, explicit terminal exit state, cooperative cancellation, and one active top-level mutation at a time; additional confirmed operations remain queued rather than failing busy. A multi-install is one top-level operation whose child installs run serially, stop on the first failure, and retain succeeded, failed, skipped, or cancelled child outcomes. Successful mutations that still need restart terminate as `succeeded_restart_required` when a separately confirmed automatic restart is available, or `waiting_for_manual_restart` when it is not. |
 | PM-016 | Restart is a separately planned operation. When allowed, relaunch the exact current DSH entry/argv/environment through a detached helper, then stop the old process. Refuse automatic restart under a detected service supervisor or explicit disable setting. |
 | PM-017 | Snapshot the profile manifest before package mutations. Restore failed install/update manifest residue; detect and reconcile a remove that deleted package files before pnpm failed. Never report success before dependency source, installed package identity/version, DSH surface, and bundle-membership postconditions pass. |
 | PM-018 | Reject unsafe source tokens, flags, whitespace/control characters, shell metacharacters, unsupported URL hosts, ambiguous package names, and mutable execution sources. Build scripts remain governed by pnpm/DSH and are never silently authorized. |
 | PM-019 | Expose no public plugin-management HTTP routes and impose no client-address, Origin, CORS, or loopback policy. The callable surface is the in-process DSH command/tool plane. |
 | PM-020 | Remain independently installable. Do not import Relay parent implementation code or KeySync implementation code. Runtime interactions use DSH/Cordis public services and the official CLI. |
 | PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`. It briefly explains conversation-based discovery and lifecycle management, includes representative search/install/remove/list prompts, and states that mutations wait for confirmation. It exposes no management control, Remote call, or additional Host service. |
+| PM-022 | Preserve required manifest peer-dependency metadata during source inspection while respecting `peerDependenciesMeta.optional`. A multi-install plan reports required peers absent from both the current profile and the requested set, deduplicated with their ranges, dependents, and suggested npm source. Planning never silently adds an unrequested companion plugin. |
 
 ## Command Grammar
 
@@ -66,7 +67,9 @@ Read-only actions: `list`, `search`, `inspect`, `status`.
 
 State-changing workflow actions: `plan`, `execute`, `status`, `cancel`.
 `plan` carries one operation from `install`, `remove`, `update`, `enable`,
-`disable`, or `restart`. `execute` accepts only a confirmation token.
+`disable`, `restart`, or `install_many`. `install_many` accepts a bounded,
+non-empty `sources` array and returns one ordered aggregate plan. `execute`
+accepts only a confirmation token.
 
 ## Search Extension Contract
 
@@ -87,5 +90,6 @@ one provider before deterministic cross-provider ordering.
 - Arbitrary tarball, filesystem, SSH Git, or non-GitHub Git installation in the
   first release.
 - Automatic mutation based only on a search query.
+- Silent installation of peer or companion plugins that the user did not request.
 - Automatic restart as part of install/update/remove.
 - Managing profiles other than the running `web` profile in the first release.
