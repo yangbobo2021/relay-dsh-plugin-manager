@@ -41,5 +41,10 @@ export type {
   MutationResult,
   PlanRequest,
 } from './manager.ts'
-export type { PluginSearchCandidate, PluginSearchProvider, PluginSearchRequest } from './search-runtime.ts'
+export type {
+  PluginSearchCandidate,
+  PluginSearchMatch,
+  PluginSearchProvider,
+  PluginSearchRequest,
+} from './search-runtime.ts'
 export type { PluginInspection, PluginSource } from './source.ts'

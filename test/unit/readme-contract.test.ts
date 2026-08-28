@@ -46,4 +46,9 @@ describe('README delivery contract', () => {
     expect(english).toMatch(/DSH's choice[\s\S]+later Chat message/u)
     expect(chinese).toMatch(/DSH 的选项界面[\s\S]+后续 Chat 消息/u)
   })
+
+  it('documents GitHub owner discovery in both languages', () => {
+    expect(english).toContain('/plugins search owner:yangbobo2021')
+    expect(chinese).toContain('/plugins 搜索 owner:yangbobo2021')
+  })
 })

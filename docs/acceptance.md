@@ -33,6 +33,9 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-025 multi-install planning deduplicates missing peer dependencies, excludes optional peers and peers already installed or requested, suggests but never silently installs companions, and successful operations terminate as `succeeded`, `succeeded_restart_required`, or `waiting_for_manual_restart` according to activation and restart availability | PM-013, PM-015, PM-016, PM-022 | source/plan unit + manager integration + opt-in real Codex/Files/Terminal DSH CLI lifecycle |
 | A-026 a valid Session-bound plan opens one plugin-owned DSH `plan-review` question; no mutation starts before an answer, and the exact single approve answer executes once without a typed chat message | PM-009, PM-023 | conversation state-machine unit + real UserQuestionService integration |
 | A-027 decline, malformed/unrelated/custom answers, provider failure/cancellation, cross-session use, pre-prompt expiry, expiry while waiting, and approval replay never cause an unauthorized mutation; a still-valid rejected plan remains retriable, while later-message `execute` remains supported | PM-009, PM-023 | negative confirmation matrix + manager expiry/replay integration |
+| A-028 explicit, natural-language, and conservative bare GitHub owner queries issue an exact owner-qualified search, verify ownership, rank inspected owner plugins ahead of unrelated rows, expose owner/provider/reason metadata, and fall back from an empty inferred hint to keyword search | PM-005, PM-006, PM-024 | query/provider unit + mixed-provider search integration + opt-in live owner search |
+| A-029 `github.com/owner/repo`, canonical HTTPS, and `github:owner/repo` inspect to the same immutable plugin; emitted repository identities round-trip into inspect and recommended sources round-trip into install planning | PM-007, PM-008, PM-024 | source unit + manager integration + opt-in live schemeless inspection |
+| A-030 owner-only inspect forms return actionable search guidance while malformed, unsafe, and non-GitHub inputs remain rejected without weakening source validation | PM-018, PM-024 | source/manager negative unit |
 
 ## Test Layers
 
@@ -73,7 +76,9 @@ commit, and sanitized output.
 The current evidence record is
 [`live-codex-2026-08-26.md`](./live-codex-2026-08-26.md). The real
 conversation and Loader record is
-[`release-candidate-2026-08-26.md`](./release-candidate-2026-08-26.md).
+[`release-candidate-2026-08-26.md`](./release-candidate-2026-08-26.md). GitHub
+owner discovery and schemeless repository round-trip evidence is recorded in
+[`live-owner-discovery-2026-08-28.md`](./acceptance/live-owner-discovery-2026-08-28.md).
 
 ## Review Gates
 

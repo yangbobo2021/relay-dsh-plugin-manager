@@ -15,6 +15,7 @@ import type { PluginInspection } from '../../src/source.ts'
 
 const PACKAGE = 'relay-dsh-plugin-codex'
 const REPOSITORY = 'github:yangbobo2021/relay-dsh-plugin-codex'
+const REPOSITORY_IDENTITY = 'github.com/yangbobo2021/relay-dsh-plugin-codex'
 const BATCH_PACKAGES = [
   PACKAGE,
   'relay-dsh-plugin-files',
@@ -144,6 +145,26 @@ describe.skipIf(!live)('real relay-dsh-plugin-codex acceptance', () => {
       expect(candidate?.recommendedSource).toMatch(/^relay-dsh-plugin-codex@\d+\.\d+\.\d+/u)
       expect(new Set(candidate?.sources.flatMap(source => source.providers))).toEqual(new Set(['github', 'npm']))
 
+      const ownerDiscovery = await new PluginManager({
+        profileDir: resolve(tmpdir(), 'unused-relay-plugin-profile'),
+        searchRuntime: ctx.pluginSearch,
+        runner: { runPlugin: async () => { throw new Error('read-only discovery cannot mutate') } },
+        hot: { activate: async () => { throw new Error('not used') }, deactivate: async () => false, isActive: () => false },
+        restarter: { available: () => false, schedule: () => { throw new Error('not used') } },
+      }).discover({ action: 'search', query: 'owner:yangbobo2021', maxResults: 10 }) as SearchResult
+      expect(ownerDiscovery.candidates.map(item => item.repository)).toEqual(expect.arrayContaining([
+        'github.com/yangbobo2021/relay-dsh-plugin-manager',
+        'github.com/yangbobo2021/relay-dsh-plugin-codex',
+        'github.com/yangbobo2021/relay-dsh-plugin-claude',
+        'github.com/yangbobo2021/relay-dsh-plugin-files',
+        'github.com/yangbobo2021/relay-dsh-plugin-terminal',
+        'github.com/yangbobo2021/relay-dsh-plugin-workbench',
+      ]))
+      expect(ownerDiscovery.candidates.slice(0, 6).every(item =>
+        item.repositoryOwner === 'yangbobo2021'
+        && item.providers.includes('github')
+        && item.matchReasons.includes('Exact GitHub owner: yangbobo2021'))).toBe(true)
+
       const npmInspection = await new PluginManager({
         profileDir: resolve(tmpdir(), 'unused-relay-plugin-profile'),
         searchRuntime: ctx.pluginSearch,
@@ -161,7 +182,7 @@ describe.skipIf(!live)('real relay-dsh-plugin-codex acceptance', () => {
         runner: { runPlugin: async () => { throw new Error('read-only inspection cannot mutate') } },
         hot: { activate: async () => { throw new Error('not used') }, deactivate: async () => false, isActive: () => false },
         restarter: { available: () => false, schedule: () => { throw new Error('not used') } },
-      }).discover({ action: 'inspect', target: REPOSITORY }) as PluginInspection
+      }).discover({ action: 'inspect', target: REPOSITORY_IDENTITY }) as PluginInspection
       expect(githubInspection).toMatchObject({ packageName: PACKAGE, sourceType: 'github', bundlePatch: './cordis.patch.yml' })
       expect(githubInspection.commit).toMatch(/^[a-f0-9]{40}$/u)
 

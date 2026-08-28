@@ -49,6 +49,7 @@ Describe what you want in ordinary language:
 
 ```text
 Find a plugin that connects to Lark
+Find DSH plugins owned by GitHub user yangbobo2021
 Install relay-dsh-plugin-codex
 Install relay-dsh-plugin-codex, relay-dsh-plugin-files, and relay-dsh-plugin-terminal together
 List my installed plugins and their status
@@ -60,6 +61,7 @@ You can also use the single `/plugins` command:
 
 ```text
 /plugins find a workspace file browser
+/plugins search owner:yangbobo2021
 /plugins install relay-dsh-plugin-files
 ```
 
