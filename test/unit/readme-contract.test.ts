@@ -32,4 +32,13 @@ describe('README delivery contract', () => {
       expect(chinese).toContain(`https://github.com/yangbobo2021/${plugin}`)
     }
   })
+
+  it('documents one-confirmation multi-plugin installation in both languages', () => {
+    for (const plugin of ['relay-dsh-plugin-codex', 'relay-dsh-plugin-files', 'relay-dsh-plugin-terminal']) {
+      expect(english).toContain(plugin)
+      expect(chinese).toContain(plugin)
+    }
+    expect(english).toMatch(/one confirmation[\s\S]+sequence/u)
+    expect(chinese).toMatch(/一次确认[\s\S]+依次安装/u)
+  })
 })

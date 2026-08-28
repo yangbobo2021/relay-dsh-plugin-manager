@@ -15,9 +15,19 @@ import type { PluginInspection } from '../../src/source.ts'
 
 const PACKAGE = 'relay-dsh-plugin-codex'
 const REPOSITORY = 'github:yangbobo2021/relay-dsh-plugin-codex'
+const BATCH_PACKAGES = [
+  PACKAGE,
+  'relay-dsh-plugin-files',
+  'relay-dsh-plugin-terminal',
+] as const
 const live = process.env.RELAY_LIVE_PLUGIN_ACCEPTANCE === '1'
 const root = resolve(import.meta.dirname, '..', '..')
-const officialCli = resolve(root, '..', '..', 'upstream', 'deepseek-harness', 'apps', 'cli', 'lib', 'bin.js')
+const upstream = process.env.DSH_UPSTREAM_DIR === undefined
+  ? resolve(root, '..', '..', 'upstream', 'deepseek-harness')
+  : resolve(process.env.DSH_UPSTREAM_DIR)
+const officialCli = process.env.DSH_CLI_PATH === undefined
+  ? resolve(upstream, 'apps', 'cli', 'lib', 'bin.js')
+  : resolve(process.env.DSH_CLI_PATH)
 
 interface LiveFixture {
   home: string
@@ -57,7 +67,10 @@ async function liveFixture(searchRuntime: PluginSearchRuntime): Promise<LiveFixt
 async function executePlan(manager: PluginManager, request: Parameters<PluginManager['plan']>[0]) {
   const plan = await manager.plan(request)
   const completed = await manager.wait(manager.execute(plan.confirmationToken).id)
-  expect(completed.status, JSON.stringify(completed.error)).toBe('succeeded')
+  const result = completed.result as { restartRequired?: boolean } | undefined
+  expect(completed.status, JSON.stringify(completed.error)).toBe(
+    result?.restartRequired === true ? 'waiting_for_manual_restart' : 'succeeded',
+  )
   return { plan, completed }
 }
 
@@ -203,6 +216,51 @@ describe.skipIf(!live)('real relay-dsh-plugin-codex acceptance', () => {
       }, null, 2)}\n`)
     } finally {
       for (const home of homes) rmSync(home, { recursive: true, force: true })
+      await ctx.fiber.dispose()
+    }
+  }, 240_000)
+
+  it('A-024/A-025 batch-plans and installs the real Codex, Files, and Terminal plugins', async () => {
+    expect(existsSync(officialCli)).toBe(true)
+    const ctx = new Context()
+    await ctx.plugin(PluginSearchRuntime)
+    const fixture = await liveFixture(ctx.pluginSearch)
+    try {
+      const plan = await fixture.manager.plan({ operation: 'install_many', sources: [...BATCH_PACKAGES] })
+      if (plan.action !== 'install_many') throw new Error('expected install_many plan')
+      expect(plan.items.map(item => item.packageName)).toEqual(BATCH_PACKAGES)
+      expect(plan.missingPeerDependencies).toContainEqual({
+        packageName: 'relay-dsh-plugin-workbench',
+        ranges: ['^0.1.0'],
+        requiredBy: ['relay-dsh-plugin-files', 'relay-dsh-plugin-terminal'],
+        suggestedSource: 'relay-dsh-plugin-workbench',
+      })
+
+      const completed = await fixture.manager.wait(fixture.manager.execute(plan.confirmationToken).id)
+      expect(completed).toMatchObject({
+        action: 'install_many',
+        status: 'waiting_for_manual_restart',
+        result: {
+          changed: true,
+          restartRequired: true,
+          items: BATCH_PACKAGES.map(packageName => ({
+            packageName,
+            status: 'waiting_for_manual_restart',
+          })),
+        },
+      })
+      expect(readProfileManifest(fixture.profileDir).dependencies).toMatchObject(Object.fromEntries(
+        BATCH_PACKAGES.map(packageName => [packageName, expect.any(String)]),
+      ))
+
+      for (const packageName of [...BATCH_PACKAGES].reverse()) {
+        await executePlan(fixture.manager, { operation: 'remove', target: packageName })
+      }
+      for (const packageName of BATCH_PACKAGES) {
+        expect(readProfileManifest(fixture.profileDir).dependencies?.[packageName]).toBeUndefined()
+      }
+    } finally {
+      rmSync(fixture.home, { recursive: true, force: true })
       await ctx.fiber.dispose()
     }
   }, 240_000)

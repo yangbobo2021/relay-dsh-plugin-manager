@@ -47,6 +47,7 @@ Chat 对话中完成。
 ```text
 找一个能连接飞书的插件
 安装 relay-dsh-plugin-codex
+一起安装 relay-dsh-plugin-codex、relay-dsh-plugin-files 和 relay-dsh-plugin-terminal
 列出已安装插件及其状态
 停用 example-dsh-plugin
 卸载 example-dsh-plugin
@@ -61,6 +62,9 @@ Chat 对话中完成。
 
 搜索和查看不会修改配置。安装、更新、卸载、启用、停用和重启都会先展示计划，
 并要求用户在后续消息中明确确认。
+一次请求安装多个插件时，DSH 会展示一份有序计划和缺失的配套 peer 插件，等待
+一次确认后依次安装。修改完成但仍需重启时，状态会明确区分“需要另行重启”和
+“等待人工重启”。
 
 ## 真实安装演示
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { OperationTracker } from '../../src/operations.ts'
 import { PlanStore } from '../../src/plans.ts'
 
@@ -64,10 +64,13 @@ describe('PM-009 confirmation plans', () => {
 })
 
 describe('PM-015 tracked operations', () => {
-  it('tracks progress, refuses concurrency, and retains terminal results', async () => {
+  it('tracks progress, queues concurrent work in FIFO order, and retains terminal results', async () => {
     let release!: () => void
-    const tracker = new OperationTracker({ random: () => 'op-1' })
+    let sequence = 0
+    const calls: string[] = []
+    const tracker = new OperationTracker({ random: () => `op-${++sequence}` })
     const started = tracker.start('install', 'example', async ({ progress }) => {
+      calls.push('first')
       progress('downloading')
       await new Promise<void>(resolve => { release = resolve })
       return { installed: true }
@@ -75,11 +78,20 @@ describe('PM-015 tracked operations', () => {
     expect(started).toMatchObject({ id: 'op-1', status: 'queued' })
     await Promise.resolve()
     expect(tracker.get('op-1')).toMatchObject({ status: 'running', progress: 'downloading' })
-    expect(() => tracker.start('remove', 'other', async () => ({}))).toThrow(/still running/)
+    const queued = tracker.start('remove', 'other', async () => {
+      calls.push('second')
+      return { removed: true }
+    })
+    expect(queued).toMatchObject({ id: 'op-2', status: 'queued' })
+    expect(calls).toEqual(['first'])
     release()
     await expect(tracker.wait('op-1')).resolves.toMatchObject({
       status: 'succeeded', result: { installed: true }, progress: 'completed',
     })
+    await expect(tracker.wait('op-2')).resolves.toMatchObject({
+      status: 'succeeded', result: { removed: true }, progress: 'completed',
+    })
+    expect(calls).toEqual(['first', 'second'])
   })
 
   it('propagates cancellation to the operation signal', async () => {
@@ -119,5 +131,24 @@ describe('PM-015 tracked operations', () => {
       result: { restartRequired: true },
       progress: 'manual restart required',
     })
+  })
+
+  it('cancels queued work without invoking its executor', async () => {
+    let release!: () => void
+    let sequence = 0
+    const tracker = new OperationTracker({ random: () => `queued-${++sequence}` })
+    const active = tracker.start('install', 'active', async () => {
+      await new Promise<void>(resolve => { release = resolve })
+      return {}
+    })
+    await Promise.resolve()
+    const execute = vi.fn(async () => ({}))
+    const queued = tracker.start('install', 'queued', execute)
+
+    expect(tracker.cancel(queued.id)).toMatchObject({ status: 'cancelled', progress: 'cancelled' })
+    await expect(tracker.wait(queued.id)).resolves.toMatchObject({ status: 'cancelled' })
+    expect(execute).not.toHaveBeenCalled()
+    release()
+    await tracker.wait(active.id)
   })
 })

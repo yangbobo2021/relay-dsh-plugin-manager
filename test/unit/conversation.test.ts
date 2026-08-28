@@ -69,6 +69,18 @@ describe('conversation surface', () => {
     expect(manager.execute).toHaveBeenCalledWith('confirm-token')
   })
 
+  it('A-024 routes an ordered multi-install source list into one plan', async () => {
+    const { tools, manager } = surface()
+    const manage = tools.find(tool => tool.name === 'plugin_manage')!
+    const run = execution()
+    const sources = ['plugin-a', 'github:example/plugin-b']
+
+    await manage.execute({ action: 'plan', operation: 'install_many', sources }, run.value)
+
+    expect(manager.plan).toHaveBeenCalledWith({ operation: 'install_many', sources }, run.value.signal)
+    expect(manager.execute).not.toHaveBeenCalled()
+  })
+
   it('steers the exact slash-command request into the receiving conversation', async () => {
     const { commands } = surface()
     const steer = vi.fn()

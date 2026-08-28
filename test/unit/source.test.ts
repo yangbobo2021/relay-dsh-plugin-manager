@@ -13,7 +13,7 @@ function json(value: unknown, status = 200): Response {
   })
 }
 
-describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
+describe('PM-007/PM-008/PM-018/PM-022 source parsing and inspection', () => {
   it('parses npm package names and requires exact versions for execution', () => {
     expect(parseNpmSpec('@relay/plugin')).toEqual({ kind: 'npm', package: '@relay/plugin' })
     expect(parseNpmSpec('@relay/plugin@1.2.3', true)).toEqual({
@@ -51,10 +51,12 @@ describe('PM-007/PM-008/PM-018 source parsing and inspection', () => {
       repository: { url: 'git+https://github.com/example/dsh-example.git' },
       peerDependencies: {
         'dsh-companion': ' ^2.0.0 ',
+        'optional-companion': '^1.0.0',
         'Invalid Package': '^1.0.0',
         'empty-range': '   ',
         'wrong-type': 42,
       },
+      peerDependenciesMeta: { 'optional-companion': { optional: true } },
       dist: { integrity: 'sha512-YWJjZA==' },
       dsh: { bundle: { patch: './cordis.patch.yml' } },
     }))

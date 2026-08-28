@@ -50,6 +50,7 @@ Describe what you want in ordinary language:
 ```text
 Find a plugin that connects to Lark
 Install relay-dsh-plugin-codex
+Install relay-dsh-plugin-codex, relay-dsh-plugin-files, and relay-dsh-plugin-terminal together
 List my installed plugins and their status
 Disable example-dsh-plugin
 Remove example-dsh-plugin
@@ -64,6 +65,10 @@ You can also use the single `/plugins` command:
 
 Search and inspection are read-only. Installation, update, removal, enablement,
 disablement, and restart always show a plan and require a later confirmation.
+When you request multiple installs together, DSH shows one ordered plan and any
+missing companion peers, waits for one confirmation, and runs the installs in
+sequence. Completed changes that still need restart are reported explicitly as
+restart-required or waiting for a manual restart.
 
 ## Real Install Demo
 
