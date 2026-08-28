@@ -1,4 +1,4 @@
-# Plugin Manager for DeepSeek Harness
+# Manage DeepSeek Harness Plugins from Chat
 
 [![npm version](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![CI](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml)
@@ -13,10 +13,24 @@ English | [中文](README.zh.md)
 **npm package:** [`relay-dsh-plugin-manager`](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 · [Relay DSH plugin catalog](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/dsh-plugins.md)
 
-`relay-dsh-plugin-manager` lets you discover and manage DSH plugins directly
-from a DeepSeek Harness Chat conversation. Ask for the capability you need, or
-ask DSH to install, update, enable, disable, or remove a plugin. DSH shows a plan
-and waits for confirmation before changing your Profile.
+**Find and manage DSH plugins by describing what you need, without leaving the
+conversation or editing Profile files by hand.**
+
+`relay-dsh-plugin-manager` lets DeepSeek Harness Chat discover, install, update,
+enable, disable, and remove plugins. Search and inspection are read-only. Before
+any change, DSH shows the plan and waits for a separate confirmation.
+
+[![Plugin Manager installs relay-dsh-plugin-codex successfully in DSH](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1)
+
+*Watch the [40-second real DSH run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1):
+search, review a no-change plan, confirm separately, and finish with the Codex
+plugin installed. Recorded on official DSH commit
+[`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)
+with Plugin Manager `0.1.0-rc.3` and Codex plugin `0.1.2`.*
+
+If conversation-first plugin management is useful to you,
+[star this plugin](https://github.com/yangbobo2021/relay-dsh-plugin-manager) and
+[share your install result or missing plugin use case](https://github.com/yangbobo2021/relay-dsh-plugin-manager/issues).
 
 ## Install
 
@@ -32,6 +46,9 @@ Then start or restart DSH Web:
 ```bash
 dsh web
 ```
+
+If `dsh` is not on `PATH`, replace it with
+`pnpm dlx @deepseek-ai/dsh@0.1.1-rc.2` in both commands.
 
 The plugin appears under **Settings > Plugins > Plugin marketplace**. This page
 is a short help view; plugin management itself happens in Chat.
@@ -64,17 +81,6 @@ You can also use the single `/plugins` command:
 
 Search and inspection are read-only. Installation, update, removal, enablement,
 disablement, and restart always show a plan and require a later confirmation.
-
-## Real Install Demo
-
-[![Plugin Manager installs relay-dsh-plugin-codex successfully in DSH](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1)
-
-Watch the [40-second real DSH run](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.en.mp4?raw=1):
-search, planning without changes, separate confirmation, installation, and the
-final `succeeded` status. It was recorded against official DSH commit
-[`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)
-with Plugin Manager `0.1.0-rc.3` and Codex plugin `0.1.2`. DSH reports when a
-restart is required after installation.
 
 ## Part of Relay
 

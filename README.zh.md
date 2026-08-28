@@ -1,4 +1,4 @@
-# DeepSeek Harness 插件管理器
+# 在 DeepSeek Harness 对话中管理插件
 
 [![npm 版本](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![CI](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml)
@@ -13,9 +13,24 @@
 **npm 包名：** [`relay-dsh-plugin-manager`](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 · [Relay DSH 插件目录](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/dsh-plugins.zh.md)
 
-`relay-dsh-plugin-manager` 让你直接在 DeepSeek Harness 的 Chat 对话中寻找和
-管理 DSH 插件。你可以描述需要的能力，也可以让 DSH 安装、更新、启用、停用
-或卸载插件。修改 Profile 前，DSH 会先展示操作计划并等待确认。
+**只需描述需要的能力，就能查找和管理 DSH 插件；不必离开对话，也不必手工
+编辑 Profile 文件。**
+
+`relay-dsh-plugin-manager` 让 DeepSeek Harness Chat 可以查找、安装、更新、
+启用、停用和卸载插件。搜索和查看只读；任何变更执行前，DSH 都会先展示计划，
+并等待单独确认。
+
+[![插件管理器在 DSH 中成功安装 relay-dsh-plugin-codex](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.zh.mp4?raw=1)
+
+*查看 [38 秒真实 DSH 运行录像](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.zh.mp4?raw=1)：
+从搜索、查看不产生变更的计划、单独确认，到 Codex 插件安装完成。录像基于官方
+DSH 提交
+[`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)，
+使用 Plugin Manager `0.1.0-rc.2` 和 Codex 插件 `0.1.2`。*
+
+如果这种对话式插件管理对你有用，欢迎
+[Star 本插件](https://github.com/yangbobo2021/relay-dsh-plugin-manager)，并
+[反馈安装结果或缺少的插件场景](https://github.com/yangbobo2021/relay-dsh-plugin-manager/issues)。
 
 ## 安装
 
@@ -30,6 +45,9 @@ dsh plugin --profile web add relay-dsh-plugin-manager@latest
 ```bash
 dsh web
 ```
+
+如果 `PATH` 中没有 `dsh`，请在两条命令中将它替换为
+`pnpm dlx @deepseek-ai/dsh@0.1.1-rc.2`。
 
 安装后可以在 **设置 > 插件 > 插件市场** 看到简短帮助。实际的插件管理仍在
 Chat 对话中完成。
@@ -61,16 +79,6 @@ Chat 对话中完成。
 
 搜索和查看不会修改配置。安装、更新、卸载、启用、停用和重启都会先展示计划，
 并要求用户在后续消息中明确确认。
-
-## 真实安装演示
-
-[![插件管理器在 DSH 中成功安装 relay-dsh-plugin-codex](https://raw.githubusercontent.com/yangbobo2021/Relay/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-success.png)](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1)
-
-查看 [38 秒真实 DSH 运行录像](https://github.com/yangbobo2021/Relay/blob/codex/relay-foundation/docs/media/dsh-plugin-manager-codex-install-demo.mp4?raw=1)：
-从搜索、只生成计划、单独确认，到安装完成并显示 `succeeded`。录像基于官方 DSH
-提交 [`b150a551`](https://github.com/deepseek-ai/deepseek-harness/commit/b150a551b8d465e31e418e1b2eaf5e79bbb7d28e)，
-使用 Plugin Manager `0.1.0-rc.2` 和 Codex 插件 `0.1.2`；安装后如需重启，
-DSH 会明确提示。
 
 ## 与 Relay 的关系
 
