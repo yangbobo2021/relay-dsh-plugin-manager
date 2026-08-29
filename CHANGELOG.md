@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## [Unreleased]
+
+### Added
+
+- The Settings > Plugins tab now gives each recommended plugin a self-contained
+  card headed by its npm package name, carrying its purpose, prerequisite, the
+  complete Chat message that installs it, and its post-install check.
+
+### Changed
+
+- The Settings > Plugins help tab is now named "Recommended plugins" and sorts
+  ahead of the built-in tabs, so it is the tab Settings > Plugins opens on.
+- The tab's copy is condensed and rescoped. Tab-level text claims nothing about
+  a specific plugin; anything true of one plugin lives on that plugin's card.
+  The former heading, introduction, standalone confirmation notice, and
+  search/remove/list example table are gone.
+- The discovery example no longer names a specific third-party integration.
+
 ## [0.1.0-rc.4] - 2026-08-28
 
 ### Added

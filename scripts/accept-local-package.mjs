@@ -106,7 +106,7 @@ try {
   if (dictionaries?.namespace !== 'settings.pluginMarketplace') {
     throw new Error('client bundle did not register its locale namespace')
   }
-  if (tab?.options?.id !== 'marketplace' || tab.options.order !== 20 || tab.options.inject !== undefined) {
+  if (tab?.options?.id !== 'marketplace' || tab.options.order !== -10 || tab.options.inject !== undefined) {
     throw new Error('client bundle did not register the read-only marketplace tab')
   }
   const React = require('react')
@@ -114,11 +114,23 @@ try {
   const html = renderToStaticMarkup(React.createElement(tab.component, {
     t: key => dictionaries.value.zh[key],
   }))
-  if (!html.includes('在聊天中管理插件') || !html.includes('等待你的确认')) {
-    throw new Error('marketplace tab is missing Chinese Chat or confirmation guidance')
+  for (const packageName of ['relay-dsh-plugin-claude', 'relay-dsh-plugin-codex']) {
+    if (!html.includes(packageName)) {
+      throw new Error(`marketplace tab is missing recommended plugin ${packageName}`)
+    }
   }
-  if ((html.match(/data-chat-prompt="true"/gu) ?? []).length !== 4) {
-    throw new Error('marketplace tab must render four representative Chat prompts')
+  const recommendedCount = (html.match(/data-recommended-plugin/gu) ?? []).length
+  if (recommendedCount !== 2) {
+    throw new Error('marketplace tab must render one card per recommended plugin')
+  }
+  // Each install line must carry its package name, so an install request never
+  // depends on a registry search, and the reader never assembles the message.
+  const promptCount = (html.match(/data-chat-prompt="true"/gu) ?? []).length
+  if (promptCount !== recommendedCount) {
+    throw new Error('marketplace tab must render one complete install message per plugin')
+  }
+  if (!html.includes('想安装/查看/卸载其他插件？')) {
+    throw new Error('marketplace tab is missing its Chinese guidance for other plugins')
   }
   if (/<(?:button|input|form|a)\b/u.test(html)) {
     throw new Error('marketplace tab must not render management controls')
@@ -146,7 +158,7 @@ try {
     package: 'relay-dsh-plugin-manager',
     dependency,
     bundleEntries: ['relay-plugin-search-runtime', 'relay-plugin-manager-host'],
-    clientTab: { id: tab.options.id, promptCount: 4, controls: 0 },
+    clientTab: { id: tab.options.id, order: tab.options.order, recommendedCount, promptCount, controls: 0 },
     dshCommit: commit,
     upstreamStatusUnchanged: inspectUpstream,
   }, null, 2)}\n`)

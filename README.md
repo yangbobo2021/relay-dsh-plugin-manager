@@ -50,8 +50,9 @@ dsh web
 If `dsh` is not on `PATH`, replace it with
 `pnpm dlx @deepseek-ai/dsh@0.1.1-rc.2` in both commands.
 
-The plugin appears under **Settings > Plugins > Plugin marketplace**. This page
-is a short help view; plugin management itself happens in Chat.
+The plugin appears under **Settings > Plugins > Recommended plugins**, the tab
+that Settings > Plugins opens on. It presents the recommended conversation-backend
+plugins and a short help view; plugin management itself happens in Chat.
 
 ### Installed by KeySync
 

@@ -7,119 +7,181 @@ export type MarketplaceSettingsTabProps =
   PropsRuntime<'settings.plugins.tab'>
   & PropsLocale<'settings.pluginMarketplace'>
 
+const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
+
 const styles = {
   section: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 20,
+    gap: 14,
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 640,
     color: 'var(--dsw-alias-label-primary)',
   },
-  header: {
+  plugins: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  plugin: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+    border: '1px solid var(--dsw-alias-border-l2)',
+    borderRadius: 8,
+    padding: '16px 18px',
+  },
+  pluginHeader: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  packageName: {
+    margin: 0,
+    fontFamily: MONO,
+    fontSize: 15,
+    lineHeight: '22px',
+    fontWeight: 600,
+  },
+  purpose: {
+    margin: 0,
+    color: 'var(--dsw-alias-label-secondary)',
+    fontSize: 13,
+    lineHeight: '20px',
+  },
+  facts: {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-  },
-  title: {
     margin: 0,
-    fontSize: 18,
-    lineHeight: '26px',
-    fontWeight: 600,
-  },
-  intro: {
-    maxWidth: 620,
-    margin: 0,
-    color: 'var(--dsw-alias-label-secondary)',
-    fontSize: 14,
-    lineHeight: '22px',
-  },
-  notice: {
-    margin: 0,
-    borderLeft: '3px solid var(--dsw-alias-state-business-primary)',
-    borderRadius: 6,
-    padding: '10px 12px',
-    background: 'var(--dsw-alias-bg-layer-1)',
-    color: 'var(--dsw-alias-label-secondary)',
-    fontSize: 13,
-    lineHeight: '20px',
-  },
-  examples: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-  },
-  examplesTitle: {
-    margin: 0,
-    fontSize: 13,
-    lineHeight: '20px',
-    fontWeight: 600,
-  },
-  list: {
-    margin: 0,
-    borderTop: '1px solid var(--dsw-alias-border-l2)',
     padding: 0,
     listStyle: 'none',
   },
-  row: {
+  factRow: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'baseline',
-    columnGap: 16,
-    rowGap: 4,
-    borderBottom: '1px solid var(--dsw-alias-border-l2)',
-    padding: '12px 2px',
+    columnGap: 12,
+    rowGap: 2,
   },
   label: {
-    flex: '0 0 92px',
+    flex: '0 0 52px',
     color: 'var(--dsw-alias-label-tertiary)',
     fontSize: 12,
-    lineHeight: '18px',
+    lineHeight: '20px',
   },
-  prompt: {
-    flex: '1 1 220px',
+  value: {
+    flex: '1 1 240px',
+    minWidth: 0,
+    overflowWrap: 'anywhere',
+    color: 'var(--dsw-alias-label-secondary)',
+    fontSize: 13,
+    lineHeight: '20px',
+  },
+  installValue: {
+    flex: '1 1 240px',
     minWidth: 0,
     overflowWrap: 'anywhere',
     color: 'var(--dsw-alias-label-primary)',
-    fontSize: 14,
-    lineHeight: '21px',
+    fontSize: 13,
+    lineHeight: '20px',
   },
-  hint: {
+  aside: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
     margin: 0,
+    borderTop: '1px solid var(--dsw-alias-border-l2)',
+    paddingTop: 14,
     color: 'var(--dsw-alias-label-tertiary)',
-    fontSize: 12,
-    lineHeight: '19px',
+    fontSize: 13,
+    lineHeight: '20px',
+  },
+  asideIcon: {
+    flex: '0 0 auto',
+    marginTop: 3,
+  },
+  asideLead: {
+    color: 'var(--dsw-alias-label-primary)',
+    fontWeight: 600,
   },
 } satisfies Record<string, CSSProperties>
 
-const exampleKeys = [
-  ['searchLabel', 'searchPrompt'],
-  ['installLabel', 'installPrompt'],
-  ['removeLabel', 'removePrompt'],
-  ['listLabel', 'listPrompt'],
-] as const satisfies readonly (readonly [MarketplaceLocaleKey, MarketplaceLocaleKey])[]
+/** The recommended plugins, in the order the tab presents them. */
+const recommendedKeys = [
+  {
+    package: 'claudePackage',
+    purpose: 'claudePurpose',
+    requires: 'claudeRequires',
+    install: 'claudeInstall',
+    verify: 'claudeVerify',
+  },
+  {
+    package: 'codexPackage',
+    purpose: 'codexPurpose',
+    requires: 'codexRequires',
+    install: 'codexInstall',
+    verify: 'codexVerify',
+  },
+] as const satisfies readonly Record<'package' | 'purpose' | 'requires' | 'install' | 'verify', MarketplaceLocaleKey>[]
 
-/** Render concise, read-only guidance for conversation-based plugin management. */
+/** Dependency-free info glyph marking the tab's one aside. */
+function InfoIcon(): ReactNode {
+  return (
+    <svg
+      style={styles.asideIcon}
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M8 7.2v4" strokeLinecap="round" />
+      <path d="M8 4.9v.1" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Render one self-contained card per recommended plugin, then one aside. */
 export function MarketplaceSettingsTab({ t }: MarketplaceSettingsTabProps): ReactNode {
   return (
     <section style={styles.section} data-plugin-marketplace-help>
-      <header style={styles.header}>
-        <h3 style={styles.title}>{t('title')}</h3>
-        <p style={styles.intro}>{t('intro')}</p>
-      </header>
-      <p style={styles.notice}>{t('confirmation')}</p>
-      <div style={styles.examples}>
-        <h4 style={styles.examplesTitle}>{t('examples')}</h4>
-        <ul style={styles.list}>
-          {exampleKeys.map(([label, prompt]) => (
-            <li style={styles.row} key={prompt}>
-              <span style={styles.label}>{t(label)}</span>
-              <span style={styles.prompt} data-chat-prompt>{t(prompt)}</span>
-            </li>
-          ))}
-        </ul>
+      <div style={styles.plugins}>
+        {recommendedKeys.map((plugin) => (
+          <article style={styles.plugin} key={plugin.package} data-recommended-plugin>
+            <header style={styles.pluginHeader}>
+              <h4 style={styles.packageName} data-plugin-package>{t(plugin.package)}</h4>
+              <p style={styles.purpose}>{t(plugin.purpose)}</p>
+            </header>
+            <ul style={styles.facts}>
+              <li style={styles.factRow}>
+                <span style={styles.label}>{t('requiresLabel')}</span>
+                <span style={styles.value}>{t(plugin.requires)}</span>
+              </li>
+              <li style={styles.factRow}>
+                <span style={styles.label}>{t('installLabel')}</span>
+                <span style={styles.installValue} data-chat-prompt>{t(plugin.install)}</span>
+              </li>
+              <li style={styles.factRow}>
+                <span style={styles.label}>{t('verifyLabel')}</span>
+                <span style={styles.value}>{t(plugin.verify)}</span>
+              </li>
+            </ul>
+          </article>
+        ))}
       </div>
-      <p style={styles.hint}>{t('commandHint')}</p>
+      <p style={styles.aside}>
+        <InfoIcon />
+        <span>
+          <strong style={styles.asideLead}>{t('otherLead')}</strong>
+          {' '}
+          {t('other')}
+        </span>
+      </p>
     </section>
   )
 }
