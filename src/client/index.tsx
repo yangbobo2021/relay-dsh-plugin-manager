@@ -1,4 +1,4 @@
-/** Read-only Plugin Marketplace help registered into Web Settings. */
+/** Read-only recommended-plugins help registered into Web Settings. */
 
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
@@ -30,7 +30,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
     name: 'settings.plugins.tab',
     id: 'marketplace',
-    order: 20,
+    order: -10,
     label: () => t('tab'),
     locale: NS,
   }, MarketplaceSettingsTab))

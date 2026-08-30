@@ -9,7 +9,7 @@ The bundle mounts two Host entries:
    model tools, and `/plugins`.
 
 It also ships one browser client entry that registers a static, read-only
-Plugin Marketplace help tab in `settings.plugins.tab`. The client has no Remote
+recommended-plugins help tab in `settings.plugins.tab`. The client has no Remote
 dependency and exposes no management action. There is no management HTTP route.
 
 ## Request Flow
@@ -31,8 +31,10 @@ natural language --------------------------+
                                                                |
                                                      restart fallback
 
-Settings > Plugins > Plugin Marketplace
+Settings > Plugins > Recommended plugins  (first tab, opened by default)
         |
+        +-- one card per recommended plugin: package name + purpose
+        |                                  + requires / install message / check
         +-- localized Chat examples only (no Host call or mutation control)
 ```
 

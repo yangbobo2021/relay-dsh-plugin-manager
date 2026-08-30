@@ -10,9 +10,12 @@ Relay DSH Plugin Manager is a conversation-first, independently installable
 DeepSeek Harness bundle. It discovers and manages DSH profile plugins through
 conversation, without management controls or public management HTTP routes.
 
-The package contributes a read-only Plugin Marketplace help tab under
-Settings > Plugins. That tab explains how to search, install, remove, and list
-plugins from Chat; it does not call the Host or mutate plugin state.
+The package contributes a read-only recommended-plugins tab under
+Settings > Plugins. That tab gives each recommended plugin one self-contained
+card headed by its npm package name, carrying its purpose, prerequisite, the
+complete Chat message that installs it, and the check that confirms it worked.
+It then points at Chat for installing, reviewing, or removing any other plugin;
+it does not call the Host or mutate plugin state.
 
 The user may enter `/plugins <request>` or describe the same request in ordinary
 conversation. Both paths use the same model-facing tools and Host management
@@ -42,7 +45,7 @@ service.
 | PM-018 | Reject unsafe source tokens, flags, whitespace/control characters, shell metacharacters, unsupported URL hosts, ambiguous package names, and mutable execution sources. Build scripts remain governed by pnpm/DSH and are never silently authorized. |
 | PM-019 | Expose no public plugin-management HTTP routes and impose no client-address, Origin, CORS, or loopback policy. The callable surface is the in-process DSH command/tool plane. |
 | PM-020 | Remain independently installable. Do not import Relay parent implementation code or KeySync implementation code. Runtime interactions use DSH/Cordis public services and the official CLI. |
-| PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`. It briefly explains conversation-based discovery and lifecycle management, includes representative search/install/remove/list prompts, and states that mutations wait for confirmation. It exposes no management control, Remote call, or additional Host service. |
+| PM-021 | Contribute one localized, read-only `marketplace` tab to `settings.plugins.tab`, sorted ahead of the Host's own tabs so Settings > Plugins opens on it. Each recommended plugin owns one self-contained card: its exact npm package name as the heading, its purpose, its prerequisite, one complete Chat message that installs it by that exact package name, and its post-install check. Tab-level copy claims nothing about a specific plugin and points at Chat for installing, reviewing, or removing any other plugin. It exposes no management control, Remote call, or additional Host service. |
 | PM-022 | Preserve required manifest peer-dependency metadata during source inspection while respecting `peerDependenciesMeta.optional`. A multi-install plan reports required peers absent from both the current profile and the requested set, deduplicated with their ranges, dependents, and suggested npm source. Planning never silently adds an unrequested companion plugin. |
 | PM-023 | `plugin_manage confirm` owns its DSH question: it validates the token, expiry, and exact Session before asking; supplies a stable plan-specific id, visible plan detail, exact approve/decline options, and `plan-review` intent; and executes in that same tool call only for the exact single approve answer. Declines, malformed or unrelated answers, provider failure/cancellation, and cross-session attempts do not execute or consume a still-valid plan. Generic model-authored question results are never mutation authority. |
 | PM-024 | GitHub owner discovery recognizes `owner:<name>`, owner-only GitHub identities, `<name> DSH plugins`, and conservative bare identifiers containing digits. It sends a typed owner intent to providers, uses GitHub's exact owner qualifier, case-insensitively verifies returned ownership, and ranks verified owner matches first. Owner-only `inspect` fails with an actionable error directing callers to search. Every emitted repository identity is accepted by `inspect`; every recommended immutable source is accepted by `plan`. |
@@ -93,7 +96,7 @@ one provider before deterministic cross-provider ordering.
 ## Explicit Non-Goals
 
 - Settings controls, dashboard, or any other second management workflow. The
-  read-only Plugin Marketplace help tab is explicitly in scope.
+  read-only recommended-plugins help tab is explicitly in scope.
 - Public management REST/HTTP endpoints.
 - Provider-defined installers, shell commands, or arbitrary pnpm arguments.
 - Arbitrary tarball, filesystem, SSH Git, or non-GitHub Git installation in the
