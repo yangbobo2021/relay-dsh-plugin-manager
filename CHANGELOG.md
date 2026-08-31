@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.1] - 2026-08-31
+
+### Changed
+
+- Correct the intended release version to `0.1.1`. Runtime behavior is unchanged
+  from `0.1.0`, including the recommended Claude/Codex plugin cards and default
+  Recommended plugins tab.
+- The verified DSH baseline remains `0.1.1-rc.2`; this release does not add
+  compatibility with the DSH `0.1.2-alpha.2` client APIs.
+
 ## [0.1.0] - 2026-08-31
 
 ### Added
@@ -79,3 +89,4 @@ All notable changes to this project are documented here.
 [0.1.0-rc.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.4]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.4...v0.1.0
+[0.1.1]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0...v0.1.1
