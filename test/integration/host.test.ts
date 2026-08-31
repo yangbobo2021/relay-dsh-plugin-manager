@@ -6,7 +6,7 @@ import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
 import CommandRuntime from '@deepseek-ai/dsh-commands'
-import { CallId } from '@deepseek-ai/dsh-llm'
+import { ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
 import UserQuestionService, { type AskUserQuestionRequest } from '@deepseek-ai/dsh-user-questions'
@@ -109,7 +109,7 @@ describe('DSH host composition', () => {
 
     const planned = await ctx.tools.execute({
       signal,
-      callId: CallId('plugin-plan-call'),
+      callId: ToolCallId('plugin-plan-call'),
       name: 'plugin_manage',
       arguments: { action: 'plan', operation: 'install', source: 'fixture-plugin' },
       agent,
@@ -119,20 +119,19 @@ describe('DSH host composition', () => {
 
     const unavailable = await ctx.tools.execute({
       signal,
-      callId: CallId('plugin-confirm-unavailable-call'),
+      callId: ToolCallId('plugin-confirm-unavailable-call'),
       name: 'plugin_manage',
       arguments: { action: 'confirm', confirmationToken: 'integration-token' },
       agent,
     })
     expect(unavailable).toMatchObject({
       isError: true,
-      content: [{ type: 'text', text: expect.stringContaining('no user-questions provider') }],
+      content: [{ type: 'text', text: expect.stringContaining('no user-questions answerer') }],
     })
     expect(manager.execute).not.toHaveBeenCalled()
 
     const seen: unknown[] = []
-    ctx.userQuestions.registerProvider({
-      async ask(request) {
+    ctx.on('user-questions/request', async request => {
         seen.push(request)
         return {
           answers: [{
@@ -140,11 +139,10 @@ describe('DSH host composition', () => {
             selected: ['Approve plugin change'],
           }],
         }
-      },
     })
     const confirmed = await ctx.tools.execute({
       signal,
-      callId: CallId('plugin-confirm-call'),
+      callId: ToolCallId('plugin-confirm-call'),
       name: 'plugin_manage',
       arguments: { action: 'confirm', confirmationToken: 'integration-token' },
       agent,
@@ -269,7 +267,7 @@ describe('DSH host composition', () => {
     const signal = new AbortController().signal
     const execute = async (callId: string, name: string, args: Record<string, unknown>) => await ctx.tools.execute({
       signal,
-      callId: CallId(callId),
+      callId: ToolCallId(callId),
       name,
       arguments: args,
       agent,
@@ -304,7 +302,7 @@ describe('DSH host composition', () => {
         question = request
         return await answer.promise
       })
-      ctx.userQuestions.registerProvider({ ask })
+      ctx.on('user-questions/request', ask)
       const confirming = execute('release-confirm', 'plugin_manage', {
         action: 'confirm', confirmationToken: plan.confirmationToken,
       })

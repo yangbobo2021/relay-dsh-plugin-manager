@@ -1,5 +1,7 @@
 # 在 DeepSeek Harness 对话中管理插件
 
+> 未发布适配：本分支已迁移到 DSH `0.1.2-alpha.2`。npm 版本和标签尚未更新；下方已发布版本的安装示例不代表新版兼容性。见[适配说明](docs/dsh-0.1.2-alpha.2.md)。
+
 [![npm 版本](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![CI](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/actions/workflows/ci.yml)
 [![npm 月下载量](https://img.shields.io/npm/dm/relay-dsh-plugin-manager?label=downloads)](https://www.npmjs.com/package/relay-dsh-plugin-manager)

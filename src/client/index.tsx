@@ -1,7 +1,7 @@
 /** Read-only recommended-plugins help registered into Web Settings. */
 
 import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import { MarketplaceSettingsTab } from './MarketplaceSettingsTab.tsx'
 import { en, zh, type MarketplaceLocaleKey } from './locales.ts'
