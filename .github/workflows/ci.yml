@@ -25,7 +25,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm run release:dry-run
+      # Branch commits may retain an already-published version; validate the
+      # package without attempting registry publication eligibility checks.
+      - run: npm pack --dry-run
       - run: npm audit --omit=dev --audit-level=moderate
 
   package-acceptance:
