@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## [Unreleased]
+## [0.1.0] - 2026-08-31
 
 ### Added
 
@@ -19,6 +19,11 @@ All notable changes to this project are documented here.
   The former heading, introduction, standalone confirmation notice, and
   search/remove/list example table are gone.
 - The discovery example no longer names a specific third-party integration.
+
+### Compatibility
+
+- This release retains the verified DSH `0.1.1-rc.2` baseline. It does not include
+  migration to the client APIs introduced in DSH `0.1.2-alpha.2`.
 
 ## [0.1.0-rc.4] - 2026-08-28
 
@@ -73,3 +78,4 @@ All notable changes to this project are documented here.
 [0.1.0-rc.2]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/releases/tag/v0.1.0-rc.2
 [0.1.0-rc.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.4]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.3...v0.1.0-rc.4
+[0.1.0]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.4...v0.1.0
