@@ -1,6 +1,6 @@
 {
   "name": "relay-dsh-plugin-manager",
-  "version": "0.2.0-rc.1",
+  "version": "0.2.0",
   "description": "Conversation-first plugin discovery and lifecycle management for DeepSeek Harness.",
   "keywords": [
     "deepseek-harness",
@@ -26,7 +26,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "next"
+    "tag": "latest"
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
