@@ -1,10 +1,10 @@
 # 在 DeepSeek Harness 对话中管理插件
 
-> **现已支持最新 DSH `0.1.2-alpha.2`。** 同一插件版本已在 DSH `0.1.2-alpha.2` 与 `0.1.1-rc.2` 上完成兼容验证。[安装插件，立即体验最新版 DSH](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性详情](docs/dsh-0.1.2-alpha.2.md)。
+> **现已支持最新 DSH `0.1.2-alpha.3`。** 插件 `0.2.1` 已在 DSH `0.1.2-alpha.3`、`0.1.2-alpha.2` 与 `0.1.1-rc.2` 上完成兼容验证。[安装插件，立即体验最新版 DSH](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性详情](docs/dsh-0.1.2-alpha.3.md)。
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-alpha.2 plugin --profile web add relay-dsh-plugin-manager@0.2.0
-npx @deepseek-ai/dsh@0.1.2-alpha.2 web
+npx @deepseek-ai/dsh@0.1.2-alpha.3 plugin --profile web add relay-dsh-plugin-manager@0.2.1
+npx @deepseek-ai/dsh@0.1.2-alpha.3 web
 ```
 
 [![npm 版本](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
@@ -12,7 +12,7 @@ npx @deepseek-ai/dsh@0.1.2-alpha.2 web
 [![npm 月下载量](https://img.shields.io/npm/dm/relay-dsh-plugin-manager?label=downloads)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![GitHub Stars](https://img.shields.io/github/stars/yangbobo2021/relay-dsh-plugin-manager?style=flat)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/stargazers)
 [![MIT 许可证](https://img.shields.io/github/license/yangbobo2021/relay-dsh-plugin-manager)](LICENSE)
-[![DSH 兼容版本](https://img.shields.io/badge/DSH-0.1.1--rc.2%20%7C%200.1.2--alpha.2-2f7d68)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH 兼容版本](https://img.shields.io/badge/DSH-0.1.1--rc.2%20%7C%200.1.2--alpha.2%20%7C%200.1.2--alpha.3-2f7d68)](https://github.com/deepseek-ai/deepseek-harness)
 [![npm 可信发布](https://img.shields.io/badge/npm_trusted_publishing-enabled-2f9e44)](.github/workflows/release.yml)
 
 [English](README.md) | 中文
@@ -54,7 +54,7 @@ dsh web
 ```
 
 如果 `PATH` 中没有 `dsh`，请在两条命令中将它替换为
-`pnpm dlx @deepseek-ai/dsh@0.1.1-rc.2`。
+`pnpm dlx @deepseek-ai/dsh@0.1.2-alpha.3`。
 
 安装后，**设置 > 插件** 会默认打开 **推荐插件** 标签页，在这里介绍推荐的
 对话后端插件，并附一份简短帮助。实际的插件管理仍在 Chat 对话中完成。

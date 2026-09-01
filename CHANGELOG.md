@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.1] - 2026-09-01
+
+### Compatibility
+
+- Publicly document support for official DSH `0.1.2-alpha.3` at commit
+  `dd6322d604e00eec1ba5e0c8541159906a21094a` while retaining verified support
+  for DSH `0.1.2-alpha.2` and `0.1.1-rc.2`.
+- Move the package's DSH development dependencies to `0.1.2-alpha.3`, so the
+  release verification exercises the newly advertised host version.
+- Runtime plugin behavior is unchanged from `0.2.0`.
+
 ## [0.1.1] - 2026-08-31
 
 ### Changed
