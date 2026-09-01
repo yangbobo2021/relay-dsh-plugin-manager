@@ -1,56 +1,34 @@
-# DSH 0.1.2-alpha.2 compatibility (unreleased)
+# DSH 双版本兼容候选（未发布）
 
-本分支适配官方 DSH `0.1.2-alpha.2`，提交
-[`0a53fb55bea101816fa226bb964ae2bed71c343b`](https://github.com/deepseek-ai/deepseek-harness/commit/0a53fb55bea101816fa226bb964ae2bed71c343b)。
-这是未发布的代码适配；插件版本号及 npm `latest` / `next` 未变更。
-本分支不承诺继续兼容 `0.1.1-rc.2`。
+同一个 `0.2.0-rc.1` 候选包的兼容目标：
 
-## 变更
+| DSH | 官方提交 |
+| --- | --- |
+| `0.1.1-rc.2` | `b150a551b8d465e31e418e1b2eaf5e79bbb7d28e` |
+| `0.1.2-alpha.2` | `0a53fb55bea101816fa226bb964ae2bed71c343b` |
 
-客户端公共服务入口；npm 开发依赖及官方 CLI fixture 升级；使用新版 scoped user-questions waterfall 验证确认流程；推荐插件页面保持只读。
+不按 DSH 版本分别发包；不要求旧用户先升级管理器。没有自定义精确版本白名单。
+DSH 可选 peer 使用版本范围表达声明，不把它当成旧宿主必然执行的安装拦截。
+当前没有发布、创建远端标签或改变 npm `latest` / `next`。预发布沿用普通 `next` 通道。
 
-## 本地验证
+## 本插件变更
 
-类型/语法检查、插件测试及构建：
+保留原有管理流程，不增加自定义 DSH 精确版本白名单或兼容拦截。声明覆盖两版宿主，并让受控完整生命周期脚本兼容旧版无 launch token、新版必须 token 的启动方式。
+
+## 验收方式与边界
+
+开发类型检查及构建使用准备好的官方 `0.1.2-alpha.2` 源码。构建一次后，将相同 tarball
+分别安装到两版官方 DSH 的独立临时 profile，检查 Host 启动、浏览器装配、功能注册及
+适用的受控功能；不修改官方源码或日常运行环境。
+跨插件结果在 Relay 的 `dsh-lab/dual-compatibility-20260831/` 中记录；插件独立测试命令：
 
 ```sh
 npm ci --ignore-scripts
-npm run typecheck
-npm test
-npm run build
+# 非管理器插件需要准备好的官方 DSH 源码；管理器使用锁定的 npm 开发依赖。
+export DSH_ROOT=/path/to/prepared/official/deepseek-harness
+npm run verify
 ```
 
-除插件管理器使用 npm 官方包外，开发脚本从 `DSH_ROOT` 链接官方包并按
-`exports.types` 生成本插件的声明映射，不再依赖已移除的 `dsh-client-runtime`。
-官方 checkout 必须是上述版本，并已完成 `pnpm install` 和 `pnpm run build:lib`。
-脚本不会修改官方源码。测试使用清理过的数据，不需要真实客户会话。
-
-
-## 发布前检查限制
-
-2026-08-31 部分本地验收通过，但官方新包发布不足 24 小时，fixture 的
-`pnpm install --frozen-lockfile --ignore-scripts` 被发布时间策略拒绝。
-没有保留 pnpm 自动生成的发布时间例外，也没有下调安全策略。
-在依赖满足冷却期后，按现有 CI 再执行冻结安装和 `npm run acceptance`。
-
-## 受控生命周期回归
-
-```sh
-npm run acceptance:controlled
-```
-
-使用隔离 Profile、本机 registry 的两个合成版本和真实官方 CLI，验证确认前
-不修改 Profile、不执行安装命令，确认令牌不可重放，以及安装→禁用→启用→升级→卸载。
-每一步冷启动真实 DSH，通过正式启动令牌换取 Cookie；检查实际加载的版本或没有加载。
-不发送模型请求，不修改用户 Profile，不发布包，也不下调依赖安装安全策略。
-可以通过 `RELAY_LIFECYCLE_EVIDENCE=/absolute/path/result.json` 保存证据。
-
-控制器在宿主外运行，返回需要重启；这不覆盖热加载、会话内确认 UI、跨 Session
-令牌校验、批量失败/取消、公开 npm/GitHub 来源以及其他真实插件的完整依赖组合。
-脚本需要已构建的官方 checkout，可使用 `DSH_UPSTREAM_DIR` 和 `DSH_CLI_PATH` 指定路径。
-
-## 合并与发布边界
-
-合并到默认分支不代表已发布，也不代表向后兼容保护已经实现。旧 DSH 用户不要从 GitHub
-默认分支安装本次适配代码，应继续使用已验证的旧版 npm 包或固定的旧版提交。
-兼容检查和独立发布通道完成前，不得将本次适配发布到原有 `latest` / `next`。
+两版核心回归不等于所有外部服务、平台或未来 DSH 版本均已验证。
+Claude 真实识图/fork 仍暂缓；Codex Default 模式原生提问限制、Workbench 刷新后尺寸不保留
+均不在本次兼容修复中关闭。所有公开 npm/GitHub 发布后的完整升级路径也需要发布后再验收。

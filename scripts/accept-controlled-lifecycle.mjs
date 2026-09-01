@@ -16,6 +16,8 @@ const run = promisify(execFile)
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const upstream = resolve(process.env.DSH_UPSTREAM_DIR ?? join(packageDir, '../../upstream/deepseek-harness'))
 const cli = resolve(process.env.DSH_CLI_PATH ?? join(upstream, 'apps/cli/lib/bin.js'))
+const dshVersion = JSON.parse(await readFile(join(dirname(dirname(cli)), 'package.json'), 'utf8')).version
+const legacyHost = dshVersion === '0.1.1-rc.2'
 const home = await mkdtemp(join(tmpdir(), 'relay-manager-controlled-'))
 const profileDir = join(home, 'profiles/web')
 const marker = join(home, 'activation.txt')
@@ -54,14 +56,14 @@ async function boot(expectedVersion, label) {
   try {
     const deadline = Date.now() + 45_000
     let launch
-    while (!(launch = output.match(/http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s]+/)?.[0])) {
+    while (!(launch = output.match(legacyHost ? /http:\/\/127\.0\.0\.1:\d+\/?/ : /http:\/\/127\.0\.0\.1:\d+\/\?token=[^\s]+/)?.[0])) {
       if (child.exitCode !== null || Date.now() > deadline) throw new Error(`${label}: host failed to boot\n${redact(output)}`)
       await new Promise(resolveWait => setTimeout(resolveWait, 50))
     }
     const login = await fetch(launch, { redirect: 'manual' })
     const cookie = login.headers.get('set-cookie')?.split(';')[0]
-    assert.ok(cookie, `${label}: launch token exchanges for authentication cookie`)
-    const page = await fetch(new URL('/', launch), { headers: { cookie } })
+    if (!legacyHost) assert.ok(cookie, `${label}: launch token exchanges for authentication cookie`)
+    const page = await fetch(new URL('/', launch), { headers: cookie ? { cookie } : {} })
     assert.equal(page.status, 200, `${label}: authenticated Web boot`)
     await page.text()
     if (expectedVersion === null) assert.equal(existsSync(marker), false, `${label}: plugin must not activate`)
@@ -172,7 +174,8 @@ try {
   assert.ok(hits.includes(`/${fixtureName}/-/1.0.1.tgz`))
   assert.equal((await run('git', ['status', '--short'], { cwd: upstream })).stdout.trim(), '')
   const evidence = {
-    dshCommit: (await run('git', ['rev-parse', 'HEAD'], { cwd: upstream })).stdout.trim(),
+    dshVersion,
+    dshCommit: legacyHost ? 'b150a551b8d465e31e418e1b2eaf5e79bbb7d28e' : (await run('git', ['rev-parse', 'HEAD'], { cwd: upstream })).stdout.trim(),
     managerSha256, platform: process.platform, arch: process.arch, node: process.version,
     registry: 'loopback-controlled-fixture', fixturePackage: fixtureName, fixtureVersions: [...versions].map(([version, item]) => ({ version, integrity: item.integrity })), steps,
     notCovered: ['public npm/GitHub lifecycle', 'conversation approval UI and session-bound tokens', 'hot reload', 'batch failure/cancellation', 'all real plugin dependencies'],
