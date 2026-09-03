@@ -27,13 +27,23 @@ interface ConfirmationCursor {
 const APPROVE_LABEL = 'Approve plugin change'
 const DECLINE_LABEL = 'Decline'
 
+function sessionEvents(session: object): ReadonlyArray<{ type: string; seq: number }> {
+  const snapshot = Reflect.get(session, 'snapshotEvents') as unknown
+  if (typeof snapshot === 'function') {
+    return Reflect.apply(snapshot, session, []) as ReadonlyArray<{ type: string; seq: number }>
+  }
+  const events = Reflect.get(session, 'events') as unknown
+  if (!Array.isArray(events)) throw new TypeError('DSH Session exposes neither snapshotEvents() nor events')
+  return events as ReadonlyArray<{ type: string; seq: number }>
+}
+
 function confirmationCursor(
   execution: ToolRunContext,
 ): Pick<ConfirmationCursor, 'sessionId' | 'userMessageSeq'> | null {
   const session = execution.agent?.session
   if (session === undefined) return null
   let userMessageSeq = -1
-  for (const event of session.events) if (event.type === 'user/message') userMessageSeq = event.seq
+  for (const event of sessionEvents(session)) if (event.type === 'user/message') userMessageSeq = event.seq
   return { sessionId: String(session.id), userMessageSeq }
 }
 

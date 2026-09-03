@@ -56,13 +56,16 @@ function surface(options: {
   return { tools, commands, manager, ask }
 }
 
-function execution(sessionId = 'session-1') {
+function execution(sessionId = 'session-1', api: 'events' | 'snapshotEvents' = 'events') {
   const events: Array<{ type: string; seq: number }> = [{ type: 'user/message', seq: 1 }]
+  const session = api === 'snapshotEvents'
+    ? { id: sessionId, snapshotEvents: () => Object.freeze([...events]) }
+    : { id: sessionId, events }
   return {
     events,
     value: {
       signal: new AbortController().signal,
-      agent: { id: sessionId, session: { id: sessionId, events } },
+      agent: { id: sessionId, session },
     } as unknown as ToolRunContext,
   }
 }
@@ -115,6 +118,18 @@ describe('conversation surface', () => {
       .rejects.toThrow(/not bound to this DSH conversation/i)
     run.events.push({ type: 'user/message', seq: 3 })
     await manage.execute({ action: 'execute', confirmationToken: 'confirm-token' }, run.value)
+    expect(manager.execute).toHaveBeenCalledWith('confirm-token')
+  })
+
+  it('binds confirmation cursors through the rc.1 snapshotEvents API', async () => {
+    const { tools, manager } = surface()
+    const manage = tools.find(tool => tool.name === 'plugin_manage')!
+    const run = execution('session-rc1', 'snapshotEvents')
+
+    await manage.execute({ action: 'plan', operation: 'install', source: 'fixture-plugin' }, run.value)
+    run.events.push({ type: 'user/message', seq: 2 })
+    await manage.execute({ action: 'execute', confirmationToken: 'confirm-token' }, run.value)
+
     expect(manager.execute).toHaveBeenCalledWith('confirm-token')
   })
 
