@@ -1,8 +1,8 @@
 # Manage DeepSeek Harness Plugins from Chat
 
-> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** Plugin `0.2.2` is verified on both releases. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
+> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** Stable `0.2.2` and preview `0.2.3-rc.1` contain the verified compatibility changes. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
 
-> **Release channels:** `latest` → `0.2.2`; `next` → `0.2.1-rc.1`.
+> **Release channels:** `latest` → `0.2.2`; `next` → `0.2.3-rc.1`.
 
 ```bash
 npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.2
@@ -14,7 +14,7 @@ npx @deepseek-ai/dsh@0.1.2-rc.1 web
 [![npm downloads](https://img.shields.io/npm/dm/relay-dsh-plugin-manager?label=downloads)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
 [![GitHub stars](https://img.shields.io/github/stars/yangbobo2021/relay-dsh-plugin-manager?style=flat)](https://github.com/yangbobo2021/relay-dsh-plugin-manager/stargazers)
 [![MIT license](https://img.shields.io/github/license/yangbobo2021/relay-dsh-plugin-manager)](LICENSE)
-[![DSH compatibility](https://img.shields.io/badge/DSH-0.1.1--rc.2%20%7C%200.1.2--alpha.2%20%7C%200.1.2--alpha.3-2f7d68)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH compatibility](https://img.shields.io/badge/DSH-0.1.2--alpha.3%20%7C%200.1.2--rc.1-2f7d68)](https://github.com/deepseek-ai/deepseek-harness)
 [![npm trusted publishing](https://img.shields.io/badge/npm_trusted_publishing-enabled-2f9e44)](.github/workflows/release.yml)
 
 English | [中文](README.zh.md)
