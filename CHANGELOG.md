@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.3] - 2026-09-04
+
+### Added
+
+- Enable the read-only DSH Plugin Registry at `https://dsh-plugins.tech` by
+  default, with explicit opt-out and HTTPS-only override support.
+- Search more than 3,000 source records using Chinese task text, English task
+  text or plugin names, while treating Registry descriptions as untrusted
+  source-only facts.
+- Resolve every Registry candidate again through the manager's existing local
+  npm/GitHub inspection before presenting an immutable install source.
+- Add reproducible live Registry acceptance without reading a Profile or
+  performing any plugin mutation.
+
+### Compatibility
+
+- Retain the verified DSH `0.1.2-rc.1`, `0.1.2-alpha.3` and legacy
+  `0.1.1-rc.2` compatibility ranges from `0.2.3-rc.1`.
+
 ## [0.2.1] - 2026-09-01
 
 ### Compatibility
@@ -101,3 +120,4 @@ All notable changes to this project are documented here.
 [0.1.0-rc.4]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.4...v0.1.0
 [0.1.1]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0...v0.1.1
+[0.2.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.2...v0.2.3
