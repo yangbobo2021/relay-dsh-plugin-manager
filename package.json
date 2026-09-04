@@ -1,6 +1,6 @@
 {
   "name": "relay-dsh-plugin-manager",
-  "version": "0.2.3-rc.1",
+  "version": "0.2.3",
   "description": "Conversation-first plugin discovery and lifecycle management for DeepSeek Harness.",
   "keywords": [
     "deepseek-harness",
@@ -36,6 +36,7 @@
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "acceptance:live:codex": "RELAY_LIVE_PLUGIN_ACCEPTANCE=1 vitest run test/live/codex.live.test.ts --reporter=verbose",
+    "acceptance:live:registry": "node --experimental-strip-types scripts/accept-live-registry.mjs",
     "acceptance:controlled": "node --experimental-strip-types scripts/accept-controlled-lifecycle.mjs",
     "acceptance": "node scripts/accept-local-package.mjs",
     "release:dry-run": "npm publish --dry-run --tag next",

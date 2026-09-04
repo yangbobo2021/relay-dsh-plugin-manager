@@ -1,11 +1,11 @@
 # 在 DeepSeek Harness 对话中管理插件
 
-> **现已支持 DSH `0.1.2-rc.1`，并保留对 `0.1.2-alpha.3` 的兼容。** 稳定版 `0.2.2` 与预览版 `0.2.3-rc.1` 均包含已验证的兼容修改。[从 npm 安装](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性证据](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903)。
+> **现已支持 DSH `0.1.2-rc.1`，并保留对 `0.1.2-alpha.3` 的兼容。** 稳定版 `0.2.3` 默认接入了有证据边界的 DSH Registry 搜索。[从 npm 安装](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性证据](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903)。
 
-> **发布通道：** `latest` → `0.2.2`；`next` → `0.2.3-rc.1`。
+> **发布通道：** `latest` → `0.2.3`。
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.2
+npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.3
 npx @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 
@@ -94,6 +94,17 @@ dsh web
 一次请求安装多个插件时，DSH 会展示一份有序计划和缺失的配套 peer 插件，等待
 一次确认后依次安装。修改完成但仍需重启时，状态会明确区分“需要另行重启”和
 “等待人工重启”。
+
+### DSH Registry 发现数据源
+
+来源级 Registry 搜索 provider 默认使用 `https://dsh-plugins.tech`。可设置插件
+配置 `registryUrl`，或环境变量 `DSH_PLUGIN_REGISTRY_URL` 覆盖 Registry 根地址
+（本地预览示例：`http://127.0.0.1:4174`）；非本机地址必须使用 HTTPS。设置
+`registryUrl: false` 可显式关闭 Registry 发现。
+
+该 provider 只发送任务查询、推断出的中英文语言和结果数量。返回候选仍必须进入同一套本地 npm/GitHub
+检查流程，完成检查后才能生成计划；Registry 描述属于不可信文本，不能授权任何
+变更。
 
 ## 与 Relay 的关系
 

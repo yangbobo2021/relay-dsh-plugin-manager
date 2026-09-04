@@ -58,12 +58,37 @@ describe('DSH host composition', () => {
     const host = await ctx.plugin(PluginHost)
     expect(ctx.tools.schemas().map(schema => schema.name).sort()).toEqual(['plugin_discover', 'plugin_manage'])
     expect(ctx.commands.list({} as Agent).map(command => command.name)).toEqual(['plugins'])
-    expect(ctx.pluginSearch.list()).toEqual(['github', 'npm'])
+    expect(ctx.pluginSearch.list()).toEqual(['dsh-registry', 'github', 'npm'])
 
     await host.dispose()
     expect(ctx.tools.schemas()).toEqual([])
     expect(ctx.commands.list({} as Agent)).toEqual([])
     expect(ctx.pluginSearch.list()).toEqual([])
+  })
+
+  it('PM-025 enables the formal Registry by default and permits an explicit opt-out', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'relay-plugin-host-registry-'))
+    cleanup.push(home)
+    process.env.DSH_HOME = home
+    const createHost = async (config: PluginHost.Config = {}) => {
+      const ctx = new Context()
+      await ctx.plugin(Loader)
+      await ctx.plugin(SystemPrompt)
+      await ctx.plugin(ToolRuntime)
+      await ctx.plugin(CommandRuntime)
+      await ctx.plugin(UserQuestionService)
+      await ctx.plugin(PluginSearchRuntime)
+      const host = await ctx.plugin(PluginHost, config)
+      return { ctx, host }
+    }
+    const enabled = await createHost()
+    expect(PluginHost.DEFAULT_REGISTRY_ORIGIN).toBe('https://dsh-plugins.tech')
+    expect(enabled.ctx.pluginSearch.list()).toContain('dsh-registry')
+    await enabled.host.dispose()
+
+    const disabled = await createHost({ registryUrl: false })
+    expect(disabled.ctx.pluginSearch.list()).toEqual(['github', 'npm'])
+    await disabled.host.dispose()
   })
 
   it('A-026 executes exact UI approval through real DSH registries and UserQuestionService', async () => {

@@ -1,11 +1,11 @@
 # Manage DeepSeek Harness Plugins from Chat
 
-> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** Stable `0.2.2` and preview `0.2.3-rc.1` contain the verified compatibility changes. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
+> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** Stable `0.2.3` adds the default evidence-backed DSH Registry search provider. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
 
-> **Release channels:** `latest` → `0.2.2`; `next` → `0.2.3-rc.1`.
+> **Release channel:** `latest` → `0.2.3`.
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.2
+npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.3
 npx @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 
@@ -99,6 +99,19 @@ When you request multiple installs together, DSH shows one ordered plan and any
 missing companion peers, waits for one confirmation, and runs the installs in
 sequence. Completed changes that still need restart are reported explicitly as
 restart-required or waiting for a manual restart.
+
+### DSH Registry discovery provider
+
+The source-only Registry search provider uses `https://dsh-plugins.tech` by
+default. Set plugin option `registryUrl` or environment variable
+`DSH_PLUGIN_REGISTRY_URL` to override the Registry origin (for example, a local
+preview at `http://127.0.0.1:4174`). Non-local URLs must use HTTPS. Set
+`registryUrl: false` to disable Registry discovery explicitly.
+
+This provider sends only the task query, inferred Chinese/English locale, and
+result limit. Returned candidates are
+always inspected locally through the same npm/GitHub flow before any plan can be
+created; Registry descriptions are untrusted text and cannot authorize changes.
 
 ## Part of Relay
 

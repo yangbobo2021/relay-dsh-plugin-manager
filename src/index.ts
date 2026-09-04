@@ -5,21 +5,26 @@ import { registerConversationSurface } from './conversation.ts'
 import { HotRuntime } from './hot-runtime.ts'
 import { PluginManager } from './manager.ts'
 import { profileDirectory } from './profile.ts'
-import { githubSearchProvider, npmSearchProvider } from './providers.ts'
+import { githubSearchProvider, npmSearchProvider, registrySearchProvider } from './providers.ts'
 import { DshRestarter } from './restart.ts'
 import { DshCliRunner } from './runner.ts'
 
 export const name = 'relay-dsh-plugin-manager'
 export const inject = ['pluginSearch', 'tools', 'commands', 'userQuestions', 'loader']
+export const DEFAULT_REGISTRY_ORIGIN = 'https://dsh-plugins.tech'
 
 export interface Config {
   allowRestart?: boolean
+  registryUrl?: string | false
 }
 
 export function apply(ctx: Context, config: Config = {}): void {
   const profileDir = profileDirectory('web')
   ctx.pluginSearch.register(npmSearchProvider())
   ctx.pluginSearch.register(githubSearchProvider())
+  const configuredRegistryUrl = config.registryUrl ?? process.env.DSH_PLUGIN_REGISTRY_URL?.trim()
+  const registryUrl = config.registryUrl === false ? undefined : configuredRegistryUrl || DEFAULT_REGISTRY_ORIGIN
+  if (registryUrl !== undefined) ctx.pluginSearch.register(registrySearchProvider(registryUrl))
 
   const manager = new PluginManager({
     profileDir,
