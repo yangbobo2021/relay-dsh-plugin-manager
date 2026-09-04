@@ -37,6 +37,7 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-029 `github.com/owner/repo`, canonical HTTPS, and `github:owner/repo` inspect to the same immutable plugin; emitted repository identities round-trip into inspect and recommended sources round-trip into install planning | PM-007, PM-008, PM-024 | source unit + manager integration + opt-in live schemeless inspection |
 | A-030 owner-only inspect forms return actionable search guidance while malformed, unsafe, and non-GitHub inputs remain rejected without weakening source validation | PM-018, PM-024 | source/manager negative unit |
 | A-031 search results feed one immutable multi-install plan through the real DSH tool and user-question registries; no mutation starts before one exact UI approval, then child installs execute serially and approval replay is rejected | PM-002, PM-005, PM-009, PM-010, PM-015, PM-023, PM-024 | combined host/tool/search/question/manager integration |
+| A-032 The default formal Registry searches at least 3,000 source records for Chinese task text, English task text, exact plugin names and an honest empty result; every returned source is locally inspected to an immutable npm version or GitHub commit, while Registry authority remains source-only, untrusted, non-recommending and non-approving | PM-005, PM-006, PM-025 | provider/unit/host integration tests plus `npm run acceptance:live:registry` |
 
 ## Test Layers
 

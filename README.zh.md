@@ -95,6 +95,17 @@ dsh web
 一次确认后依次安装。修改完成但仍需重启时，状态会明确区分“需要另行重启”和
 “等待人工重启”。
 
+### DSH Registry 发现数据源
+
+来源级 Registry 搜索 provider 默认使用 `https://dsh-plugins.tech`。可设置插件
+配置 `registryUrl`，或环境变量 `DSH_PLUGIN_REGISTRY_URL` 覆盖 Registry 根地址
+（本地预览示例：`http://127.0.0.1:4174`）；非本机地址必须使用 HTTPS。设置
+`registryUrl: false` 可显式关闭 Registry 发现。
+
+该 provider 只发送任务查询、推断出的中英文语言和结果数量。返回候选仍必须进入同一套本地 npm/GitHub
+检查流程，完成检查后才能生成计划；Registry 描述属于不可信文本，不能授权任何
+变更。
+
 ## 与 Relay 的关系
 
 本插件在 [Relay](https://github.com/yangbobo2021/Relay) 的 integration 工作区中

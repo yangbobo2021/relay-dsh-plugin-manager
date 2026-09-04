@@ -49,6 +49,7 @@ service.
 | PM-022 | Preserve required manifest peer-dependency metadata during source inspection while respecting `peerDependenciesMeta.optional`. A multi-install plan reports required peers absent from both the current profile and the requested set, deduplicated with their ranges, dependents, and suggested npm source. Planning never silently adds an unrequested companion plugin. |
 | PM-023 | `plugin_manage confirm` owns its DSH question: it validates the token, expiry, and exact Session before asking; supplies a stable plan-specific id, visible plan detail, exact approve/decline options, and `plan-review` intent; and executes in that same tool call only for the exact single approve answer. Declines, malformed or unrelated answers, provider failure/cancellation, and cross-session attempts do not execute or consume a still-valid plan. Generic model-authored question results are never mutation authority. |
 | PM-024 | GitHub owner discovery recognizes `owner:<name>`, owner-only GitHub identities, `<name> DSH plugins`, and conservative bare identifiers containing digits. It sends a typed owner intent to providers, uses GitHub's exact owner qualifier, case-insensitively verifies returned ownership, and ranks verified owner matches first. Owner-only `inspect` fails with an actionable error directing callers to search. Every emitted repository identity is accepted by `inspect`; every recommended immutable source is accepted by `plan`. |
+| PM-025 | Register a read-only DSH Registry provider against `https://dsh-plugins.tech` by default, with an explicit `registryUrl: false` opt-out and HTTPS-only configuration override. Send only the task query, inferred Chinese/English locale and result limit; accept only source-level untrusted DiscoveryEntry records, convert their npm/GitHub descriptors into core-owned source types, and submit them to the same mandatory local inspection used by all providers. Registry responses cannot supply exact versions, approval, plans, installers, or profile state, and provider failure remains isolated. |
 
 ## Command Grammar
 
@@ -92,6 +93,12 @@ confirmation, installation, rollback, activation, and restart.
 
 Provider scores are not globally comparable. The manager uses them only within
 one provider before deterministic cross-provider ordering.
+
+The `dsh-registry` provider defaults to `https://dsh-plugins.tech`. Plugin
+configuration `registryUrl` or environment variable `DSH_PLUGIN_REGISTRY_URL`
+may override that origin for controlled deployment, while `registryUrl: false`
+disables it explicitly. Non-local overrides require HTTPS. The provider transmits
+no Profile, installed inventory, path, credential, or conversation transcript.
 
 ## Explicit Non-Goals
 
