@@ -39,10 +39,61 @@ describe('PM-004/PM-005 search orchestration', () => {
     expect(result.providerErrors).toEqual([{ provider: 'broken', error: 'catalog offline' }])
     expect(result.candidates).toHaveLength(1)
     expect(result.candidates[0]).toMatchObject({
+      rank: 1,
       identity: 'github.com/example/shared',
       recommendedSource: 'shared-plugin@1.0.0',
     })
     expect(result.candidates[0]?.sources).toHaveLength(2)
+    expect(result.presentation).toEqual({
+      order: 'rank_ascending',
+      returnedCandidates: 1,
+      requestedMaximum: 20,
+      includeEveryPossiblyRelevant: true,
+      excludeClearlyIrrelevant: true,
+      silentTopNTruncation: false,
+    })
+  })
+
+  it('PM-026 returns the complete ranked result page instead of an implicit top five', async () => {
+    const receivedLimits: number[] = []
+    const provider: PluginSearchProvider = {
+      id: 'catalog',
+      search: async (request) => {
+        receivedLimits.push(request.maxResults)
+        return Array.from({ length: 8 }, (_, index) => ({
+          id: `candidate-${String(index + 1)}`,
+          title: `candidate-${String(index + 1)}`,
+          score: 8 - index,
+          sources: [{ kind: 'npm' as const, package: `candidate-${String(index + 1)}` }],
+        }))
+      },
+    }
+    const inspect = async (raw: string | PluginSource): Promise<PluginInspection> => {
+      const source = typeof raw === 'string' ? parsePluginSource(raw) : raw
+      if (source.kind !== 'npm') throw new Error('fixture expects npm')
+      return {
+        source: { ...source, version: '1.0.0' },
+        sourceType: 'npm',
+        requestedSpec: source.package,
+        installSpec: `${source.package}@1.0.0`,
+        packageName: source.package,
+        version: '1.0.0',
+        integrity: 'sha512-YQ==',
+        repository: `github.com/example/${source.package}`,
+        description: source.package,
+        bundlePatch: './cordis.patch.yml',
+        client: false,
+        peerDependencies: {},
+      }
+    }
+
+    const result = await searchPlugins({ entries: () => [provider] }, 'terminal', { inspect })
+
+    expect(receivedLimits).toEqual([20])
+    expect(result.candidates).toHaveLength(8)
+    expect(result.candidates.map(candidate => candidate.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(result.candidates.at(-1)?.packageName).toBe('candidate-8')
+    expect(result.presentation.silentTopNTruncation).toBe(false)
   })
 
   it('times out one provider without blocking a healthy sibling', async () => {

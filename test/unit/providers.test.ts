@@ -146,6 +146,17 @@ describe('built-in search providers', () => {
     })
   })
 
+  it('PM-026 allows a built-in provider to fill the complete twenty-result page', async () => {
+    const fetch = vi.fn(async () => json({
+      snapshot_id: 'discovery.source.2026-09-05.abc123',
+      candidates: [],
+    })) as unknown as typeof globalThis.fetch
+    await registrySearchProvider('https://dsh-plugins.tech', fetch).search({
+      query: 'terminal', maxResults: 20, signal: new AbortController().signal,
+    })
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]?.body))).toMatchObject({ limit: 20 })
+  })
+
   it('PM-025 rejects insecure remote endpoints and malformed Registry authority fields', async () => {
     expect(() => registrySearchProvider('http://plugins.example.com')).toThrow(/HTTPS/u)
     const fetch = vi.fn(async () => json({ snapshot_id: 'bad', candidates: [] })) as unknown as typeof globalThis.fetch

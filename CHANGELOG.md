@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.4] - 2026-09-05
+
+### Changed
+
+- Expose one-based search ranks, default search pages to twenty candidates, and
+  instruct the DSH Agent to exclude clearly unrelated purposes while presenting
+  every remaining possibly relevant result instead of silently truncating the
+  answer to a fixed top-N.
+
 ## [0.2.3] - 2026-09-04
 
 ### Added

@@ -24,6 +24,7 @@ export interface SearchResultSource {
 export interface SearchResult {
   query: string
   candidates: Array<{
+    rank: number
     identity: string
     packageName: string
     description: string | null
@@ -34,6 +35,14 @@ export interface SearchResult {
     sources: SearchResultSource[]
     recommendedSource: string
   }>
+  presentation: {
+    order: 'rank_ascending'
+    returnedCandidates: number
+    requestedMaximum: number
+    includeEveryPossiblyRelevant: true
+    excludeClearlyIrrelevant: true
+    silentTopNTruncation: false
+  }
   providerErrors: Array<{ provider: string; error: string }>
   rejectedCandidates: number
 }
@@ -152,7 +161,7 @@ export async function searchPlugins(
   options: SearchOptions = {},
 ): Promise<SearchResult> {
   const parsed = parseSearchQuery(rawQuery)
-  const maxResults = Math.max(1, Math.min(20, options.maxResults ?? 6))
+  const maxResults = Math.max(1, Math.min(20, options.maxResults ?? 20))
   const timeoutMs = Math.max(100, options.providerTimeoutMs ?? 10_000)
   const providers = runtime.entries()
   const settled = await Promise.allSettled(providers.map(async provider => ({
@@ -190,7 +199,7 @@ export async function searchPlugins(
     }
   }))
 
-  const projects = new Map<string, SearchResult['candidates'][number] & {
+  const projects = new Map<string, Omit<SearchResult['candidates'][number], 'rank'> & {
     rank: number
     matchPriority: number
   }>()
@@ -246,9 +255,23 @@ export async function searchPlugins(
       || left.rank - right.rank
       || left.packageName.localeCompare(right.packageName))
     .slice(0, maxResults)
-    .map(({ rank: _rank, matchPriority: _matchPriority, ...candidate }) => ({
+    .map(({ rank: _providerRank, matchPriority: _matchPriority, ...candidate }, index) => ({
       ...candidate,
+      rank: index + 1,
       providers: candidate.providers.sort(),
     }))
-  return { query: parsed.query, candidates, providerErrors, rejectedCandidates }
+  return {
+    query: parsed.query,
+    candidates,
+    presentation: {
+      order: 'rank_ascending',
+      returnedCandidates: candidates.length,
+      requestedMaximum: maxResults,
+      includeEveryPossiblyRelevant: true,
+      excludeClearlyIrrelevant: true,
+      silentTopNTruncation: false,
+    },
+    providerErrors,
+    rejectedCandidates,
+  }
 }

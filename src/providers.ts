@@ -1,7 +1,7 @@
 import type { PluginSearchProvider } from './search-runtime.ts'
 import { isGithubPart, NPM_NAME } from './source.ts'
 
-const MAX_PROVIDER_RESULTS = 12
+const MAX_PROVIDER_RESULTS = 20
 const REGISTRY_SNAPSHOT_ID = /^discovery\.[a-z0-9.-]+$/u
 
 function query(value: string): string {

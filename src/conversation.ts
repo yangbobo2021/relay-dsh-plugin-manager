@@ -93,7 +93,7 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
   const confirmations = new Map<string, ConfirmationCursor>()
   ctx.tools.register(defineTool({
     name: 'plugin_discover',
-    description: 'Read-only DSH plugin discovery. List installed plugins, search registered sources (including GitHub owner:NAME), inspect one npm/GitHub repository source, or query plugin/operation status. Search result repository and recommendedSource values can be passed directly to inspect and plan. This tool never changes the profile.',
+    description: 'Read-only DSH plugin discovery. List installed plugins, search registered sources (including GitHub owner:NAME), inspect one npm/GitHub repository source, or query plugin/operation status. Search candidates form one relevance-ranked result page: present every possibly relevant candidate in ascending rank, exclude candidates whose purpose is clearly unrelated, and NEVER silently truncate the remaining page to a fixed top-N. Ranking is not a compatibility, security, or installation approval. Search result repository and recommendedSource values can be passed directly to inspect and plan. This tool never changes the profile.',
     parameters: {
       action: {
         type: 'string',
@@ -104,7 +104,7 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
       query: { type: 'string', description: 'Natural-language query or GitHub owner:NAME search.' },
       target: { type: 'string', description: 'npm package, github:owner/repo, https://github.com/owner/repo, github.com/owner/repo, or installed package name.' },
       operationId: { type: 'string', description: 'Operation id returned by plugin_manage.' },
-      maxResults: { type: 'integer', description: 'Maximum merged search results.' },
+      maxResults: { type: 'integer', description: 'Ranked result-page size from 1 to 20. Use 20 for ordinary need-based searches unless the user explicitly asks for fewer.' },
     },
     output: { schema: { type: 'json' }, render: renderJson },
     timeoutMs: 35_000,
