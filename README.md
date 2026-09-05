@@ -112,6 +112,10 @@ This provider sends only the task query, inferred Chinese/English locale, and
 result limit. Returned candidates are
 always inspected locally through the same npm/GitHub flow before any plan can be
 created; Registry descriptions are untrusted text and cannot authorize changes.
+Search returns one relevance-ranked page (twenty candidates by default). The
+Agent is instructed to preserve that order and show every possibly relevant
+candidate instead of silently shortening the page to a fixed top five; results
+whose plugin purpose is clearly unrelated to the request are excluded.
 
 ## Part of Relay
 

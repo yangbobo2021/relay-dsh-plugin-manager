@@ -38,6 +38,7 @@ This matrix is the release contract. Tests name the relevant `PM-*` ids.
 | A-030 owner-only inspect forms return actionable search guidance while malformed, unsafe, and non-GitHub inputs remain rejected without weakening source validation | PM-018, PM-024 | source/manager negative unit |
 | A-031 search results feed one immutable multi-install plan through the real DSH tool and user-question registries; no mutation starts before one exact UI approval, then child installs execute serially and approval replay is rejected | PM-002, PM-005, PM-009, PM-010, PM-015, PM-023, PM-024 | combined host/tool/search/question/manager integration |
 | A-032 The default formal Registry searches at least 3,000 source records for Chinese task text, English task text, exact plugin names and an honest empty result; every returned source is locally inspected to an immutable npm version or GitHub commit, while Registry authority remains source-only, untrusted, non-recommending and non-approving | PM-005, PM-006, PM-025 | provider/unit/host integration tests plus `npm run acceptance:live:registry` |
+| A-033 Search defaults to a complete twenty-candidate result page, assigns stable one-based display ranks after merge and deduplication, and tells the Agent to exclude clearly unrelated purposes while surfacing every remaining possibly relevant candidate without silent fixed-count truncation | PM-005, PM-026 | search orchestration and conversation-tool contract unit tests plus Agent answer acceptance |
 
 ## Test Layers
 
