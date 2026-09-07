@@ -23,9 +23,8 @@ export interface Config {
 export function apply(ctx: Context, config: Config = {}): void {
   const profileDir = profileDirectory('web')
   const telemetry = config.telemetry ?? {
-    enabled: process.env.RELAY_PLUGIN_MANAGER_TELEMETRY === '1',
-    host: process.env.RELAY_PLUGIN_MANAGER_POSTHOG_HOST,
-    projectKey: process.env.RELAY_PLUGIN_MANAGER_POSTHOG_KEY,
+    enabled: process.env.RELAY_PLUGIN_MANAGER_TELEMETRY !== '0',
+    endpoint: process.env.RELAY_PLUGIN_MANAGER_TELEMETRY_ENDPOINT,
   }
   ctx.pluginSearch.register(npmSearchProvider())
   ctx.pluginSearch.register(githubSearchProvider())

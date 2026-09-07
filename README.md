@@ -100,16 +100,20 @@ missing companion peers, waits for one confirmation, and runs the installs in
 sequence. Completed changes that still need restart are reported explicitly as
 restart-required or waiting for a manual restart.
 
-### Optional anonymous usage analytics
+### Anonymous usage analytics
 
-No usage data is sent by default. To explicitly opt in and help improve plugin
-search and installation, set this when starting DSH Web:
+Anonymous operational analytics are enabled by default to measure plugin-manager
+search and installation outcomes. To opt out without disabling plugin management,
+set this when starting DSH Web:
 
 ```bash
-RELAY_PLUGIN_MANAGER_TELEMETRY=1 dsh web
+RELAY_PLUGIN_MANAGER_TELEMETRY=0 dsh web
 ```
 
-When enabled, the plugin records only the manager action type and plugin
+The manager sends events only to the first-party
+`https://dsh-plugins.tech/v1/telemetry/events` endpoint. The Registry validates
+the exact event schema and forwards accepted events to its PostHog analytics
+project. The plugin records only the manager action type and plugin
 install start, success, or failure events produced by the manager. Install
 events contain the public package name, activation/restart booleans, and a
 bounded error code. Search terms, conversation content, local paths, command

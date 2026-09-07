@@ -2,14 +2,18 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## [0.2.5] - 2026-09-07
 
 ### Added
 
-- Explicitly opt-in, personless PostHog analytics for plugin-manager use and
-  manager-executed install start, success, and failure outcomes.
-- A locally persisted random anonymous identifier with IP geolocation disabled;
-  search text, local paths, command output, and error messages are excluded.
+- Default-on anonymous operational analytics for plugin-manager use and
+  manager-executed install start, success, and failure outcomes, with explicit
+  opt-out through `RELAY_PLUGIN_MANAGER_TELEMETRY=0`.
+- First-party delivery to the Registry's versioned telemetry endpoint; the npm
+  package contains no PostHog host or project key.
+- A locally persisted random anonymous identifier; search text, installed
+  inventory, local paths, command output, error messages, IP geolocation, and
+  account identity are excluded.
 
 ## [0.2.4] - 2026-09-05
 

@@ -1,6 +1,6 @@
 {
   "name": "relay-dsh-plugin-manager",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Conversation-first plugin discovery and lifecycle management for DeepSeek Harness.",
   "keywords": [
     "deepseek-harness",
@@ -32,13 +32,13 @@
     "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
     "build": "npm run clean && tsdown --config tsdown.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run && node --test test/*.test.mjs",
-    "test:unit": "vitest run test/unit",
-    "test:integration": "vitest run test/integration",
-    "acceptance:live:codex": "RELAY_LIVE_PLUGIN_ACCEPTANCE=1 vitest run test/live/codex.live.test.ts --reporter=verbose",
-    "acceptance:live:registry": "node --experimental-strip-types scripts/accept-live-registry.mjs",
-    "acceptance:controlled": "node --experimental-strip-types scripts/accept-controlled-lifecycle.mjs",
-    "acceptance": "node scripts/accept-local-package.mjs",
+    "test": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 vitest run && node --test test/*.test.mjs",
+    "test:unit": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 vitest run test/unit",
+    "test:integration": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 vitest run test/integration",
+    "acceptance:live:codex": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 RELAY_LIVE_PLUGIN_ACCEPTANCE=1 vitest run test/live/codex.live.test.ts --reporter=verbose",
+    "acceptance:live:registry": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node --experimental-strip-types scripts/accept-live-registry.mjs",
+    "acceptance:controlled": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node --experimental-strip-types scripts/accept-controlled-lifecycle.mjs",
+    "acceptance": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node scripts/accept-local-package.mjs",
     "release:dry-run": "npm publish --dry-run --tag next",
     "verify": "npm run typecheck && npm test && npm run build && npm run acceptance",
     "prepack": "npm run build"

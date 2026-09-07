@@ -198,7 +198,7 @@ describe('PluginManager official-command integration', () => {
     expect(() => subject.execute(plan.confirmationToken)).toThrowError(/already been used/i)
   })
 
-  it('records anonymous manager use and successful installs without query text or local paths', async () => {
+  it('PM-027 records anonymous manager use and successful installs without query text or local paths', async () => {
     const dir = await fixture()
     cleanup.push(dir)
     const events: Array<{ event: string; properties: Readonly<Record<string, string | number | boolean>> }> = []
@@ -249,7 +249,7 @@ describe('PluginManager official-command integration', () => {
     expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(before)
   })
 
-  it('records only a bounded error code when an install fails', async () => {
+  it('PM-027 records only a bounded error code when an install fails', async () => {
     const dir = await fixture()
     cleanup.push(dir)
     const events: Array<{ event: string; properties: Readonly<Record<string, string | number | boolean>> }> = []
@@ -427,7 +427,7 @@ describe('PluginManager official-command integration', () => {
     })
   })
 
-  it('A-024/A-025 plans and serially installs three plugins after one confirmation with peer preflight', async () => {
+  it('A-024/A-025/PM-027 plans and serially installs three plugins after one confirmation with peer preflight', async () => {
     const dir = await fixture()
     cleanup.push(dir)
     const sources = ['plugin-a', 'plugin-b', 'plugin-c']
@@ -442,6 +442,7 @@ describe('PluginManager official-command integration', () => {
     const calls: string[][] = []
     let activeRunners = 0
     let maxActiveRunners = 0
+    const events: Array<{ event: string; properties: Readonly<Record<string, string | number | boolean>> }> = []
     const runPlugin = vi.fn(async (_profile: string, args: readonly string[]) => {
       calls.push([...args])
       activeRunners += 1
@@ -453,7 +454,10 @@ describe('PluginManager official-command integration', () => {
       activeRunners -= 1
       return { exitCode: 0, signal: null, stdout: 'added', stderr: '', timedOut: false, cancelled: false }
     })
-    const subject = manager(dir, runPlugin, { inspect })
+    const subject = manager(dir, runPlugin, {
+      inspect,
+      telemetry: { capture: (event, properties = {}) => { events.push({ event, properties }) } },
+    })
 
     const plan = await subject.plan({ operation: 'install_many', sources })
     if (plan.action !== 'install_many') throw new Error('expected install_many plan')
@@ -483,6 +487,15 @@ describe('PluginManager official-command integration', () => {
     expect(readProfileManifest(dir).dependencies).toMatchObject(Object.fromEntries(
       sources.map(name => [name, VERSION]),
     ))
+    expect(events.filter(item => item.event === 'plugin_install_started')).toEqual(
+      sources.map(plugin_name => ({ event: 'plugin_install_started', properties: { plugin_name, batch: true } })),
+    )
+    expect(events.filter(item => item.event === 'plugin_install_succeeded')).toEqual(
+      sources.map(plugin_name => ({
+        event: 'plugin_install_succeeded',
+        properties: { plugin_name, batch: true, activated: true, restart_required: false },
+      })),
+    )
     expect(() => subject.execute(plan.confirmationToken)).toThrow(/already been used/i)
   })
 

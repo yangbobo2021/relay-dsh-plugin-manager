@@ -2,10 +2,16 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
-const DEFAULT_HOST = 'https://us.i.posthog.com'
-const DEFAULT_PROJECT_KEY = 'phc_t7C34XS2fUwwnxy9SbjWfCNZPiTkx88QnbeovfWqkkrr'
+const DEFAULT_ENDPOINT = 'https://dsh-plugins.tech/v1/telemetry/events'
 const STATE_DIRECTORY = '.relay-plugin-manager'
 const STATE_FILE = 'telemetry.json'
+const SCHEMA_VERSION = '1.0.0'
+const EVENTS = new Set([
+  'plugin_manager_used',
+  'plugin_install_started',
+  'plugin_install_succeeded',
+  'plugin_install_failed',
+])
 
 export type TelemetryProperty = string | number | boolean
 
@@ -14,12 +20,10 @@ export interface Telemetry {
 }
 
 export interface TelemetryConfig {
-  /** Anonymous product analytics are disabled unless this is explicitly true. */
+  /** Anonymous operational telemetry is enabled unless this is explicitly false. */
   enabled?: boolean
-  /** Override only when routing events to another PostHog project. */
-  host?: string
-  /** PostHog browser-facing project key. This is not a personal API key. */
-  projectKey?: string
+  /** Registry telemetry endpoint. Only the canonical service or localhost is accepted. */
+  endpoint?: string
 }
 
 interface TelemetryRuntime {
@@ -29,18 +33,18 @@ interface TelemetryRuntime {
 
 const noopTelemetry: Telemetry = Object.freeze({ capture() {} })
 
-function safeHost(value: string | undefined): string {
-  const parsed = new URL(value ?? DEFAULT_HOST)
-  if (parsed.protocol !== 'https:' || !/(^|\.)i\.posthog\.com$/u.test(parsed.hostname)) {
-    throw new Error('Telemetry host must be an HTTPS PostHog ingestion origin.')
+function safeEndpoint(value: string | undefined): string | null {
+  try {
+    const parsed = new URL(value ?? DEFAULT_ENDPOINT)
+    const local = ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)
+    const canonical = parsed.protocol === 'https:' && parsed.hostname === 'dsh-plugins.tech'
+    if ((!local && !canonical) || (local && !['http:', 'https:'].includes(parsed.protocol))) return null
+    if (parsed.username !== '' || parsed.password !== '' || parsed.pathname !== '/v1/telemetry/events'
+      || parsed.search !== '' || parsed.hash !== '') return null
+    return parsed.href
+  } catch {
+    return null
   }
-  return parsed.origin
-}
-
-function safeProjectKey(value: string | undefined): string {
-  const key = value ?? DEFAULT_PROJECT_KEY
-  if (!/^phc_[A-Za-z0-9_-]{20,}$/u.test(key)) throw new Error('Telemetry project key is invalid.')
-  return key
 }
 
 function anonymousId(profileDir: string, random: () => string): string {
@@ -59,9 +63,26 @@ function anonymousId(profileDir: string, random: () => string): string {
     mkdirSync(directory, { recursive: true, mode: 0o700 })
     writeFileSync(path, `${JSON.stringify({ anonymousId: id })}\n`, { mode: 0o600 })
   } catch {
-    // Analytics must never block plugin management; the process-scoped id still works.
+    // Telemetry must never block plugin management; the process-scoped id still works.
   }
   return id
+}
+
+function allowedProperties(event: string, properties: Readonly<Record<string, TelemetryProperty>>): boolean {
+  const keys = new Set(Object.keys(properties))
+  const exact = (required: readonly string[], optional: readonly string[] = []): boolean => {
+    if (required.some(key => !keys.has(key))) return false
+    return [...keys].every(key => required.includes(key) || optional.includes(key))
+  }
+  if (event === 'plugin_manager_used') {
+    if (!exact(['surface', 'action'], ['has_query', 'query_length_bucket', 'batch_size'])) return false
+    if (!['discover', 'plan'].includes(String(properties.surface))) return false
+    return typeof properties.action === 'string'
+  }
+  if (event === 'plugin_install_started') return exact(['plugin_name'], ['batch'])
+  if (event === 'plugin_install_succeeded') return exact(['plugin_name', 'activated', 'restart_required'], ['batch'])
+  if (event === 'plugin_install_failed') return exact(['plugin_name', 'error_code'], ['batch'])
+  return false
 }
 
 export function createTelemetry(
@@ -69,34 +90,33 @@ export function createTelemetry(
   config: TelemetryConfig | undefined,
   runtime: TelemetryRuntime = { fetch, random: randomUUID },
 ): Telemetry {
-  if (config?.enabled !== true) return noopTelemetry
-  const host = safeHost(config.host)
-  const projectKey = safeProjectKey(config.projectKey)
-  const distinctId = anonymousId(profileDir, runtime.random)
+  if (config?.enabled === false) return noopTelemetry
+  const endpoint = safeEndpoint(config?.endpoint)
+  if (endpoint === null) return noopTelemetry
+  let distinctId: string | undefined
 
   return Object.freeze({
     capture(event: string, properties: Readonly<Record<string, TelemetryProperty>> = {}): void {
-      if (!/^[a-z][a-z0-9_]{2,63}$/u.test(event)) return
+      if (!EVENTS.has(event) || !allowedProperties(event, properties)) return
+      distinctId ??= anonymousId(profileDir, runtime.random)
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 1_500)
+      const timeout = setTimeout(() => controller.abort(), 5_000)
       timeout.unref?.()
-      void runtime.fetch(`${host}/capture/`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          api_key: projectKey,
-          event,
-          properties: {
-            ...properties,
-            distinct_id: distinctId,
-            $process_person_profile: false,
-            $geoip_disable: true,
-            $ip: null,
-            product: 'relay-dsh-plugin-manager',
-          },
-        }),
-        signal: controller.signal,
-      }).catch(() => undefined).finally(() => clearTimeout(timeout))
+      try {
+        void runtime.fetch(endpoint, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            schema_version: SCHEMA_VERSION,
+            anonymous_id: distinctId,
+            event,
+            properties,
+          }),
+          signal: controller.signal,
+        }).catch(() => undefined).finally(() => clearTimeout(timeout))
+      } catch {
+        clearTimeout(timeout)
+      }
     },
   })
 }
