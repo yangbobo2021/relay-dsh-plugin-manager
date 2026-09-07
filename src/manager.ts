@@ -42,6 +42,7 @@ import type { DshCliRunner, RunnerResult } from './runner.ts'
 import type { HotRuntime, HotActivationResult } from './hot-runtime.ts'
 import type { DshRestarter } from './restart.ts'
 import { fail } from './errors.ts'
+import type { Telemetry } from './telemetry.ts'
 
 interface LoaderEntryLike {
   id?: string
@@ -66,6 +67,7 @@ export interface PluginManagerDependencies {
   operations?: OperationTracker
   fetchOptions?: Omit<FetchOptions, 'signal'>
   hmrTimeoutMs?: number
+  telemetry?: Telemetry
 }
 
 export interface DiscoverRequest {
@@ -140,10 +142,32 @@ const PROTECTED_ENTRY_IDS = new Set([
   'web-runtime',
 ])
 
+const TELEMETRY_ERROR_CODES = new Set([
+  'INVALID_SOURCE', 'INVALID_NPM_SPEC', 'INVALID_NPM_VERSION', 'INVALID_GITHUB_SPEC',
+  'INVALID_GITHUB_REF', 'GITHUB_OWNER_REQUIRES_SEARCH', 'IMMUTABLE_SOURCE_REQUIRED',
+  'NETWORK_ERROR', 'SOURCE_HTTP_ERROR', 'INVALID_SOURCE_METADATA', 'INVALID_PLUGIN_MANIFEST',
+  'NOT_DSH_PLUGIN', 'PACKAGE_NAME_MISMATCH', 'NPM_INTEGRITY_MISSING', 'INVALID_SEARCH_QUERY',
+  'INVALID_ACTION', 'INVALID_BATCH', 'DUPLICATE_SEARCH_PROVIDER', 'PROFILE_READ_FAILED',
+  'PROFILE_WRITE_FAILED', 'PLUGIN_NOT_INSTALLED', 'PLUGIN_ALREADY_INSTALLED',
+  'ENABLEMENT_UNSUPPORTED', 'ENABLEMENT_CONFLICT', 'PROTECTED_PLUGIN', 'CONFIRMATION_REQUIRED',
+  'CONFIRMATION_INVALID', 'CONFIRMATION_EXPIRED', 'CONFIRMATION_REPLAYED', 'PLAN_STALE',
+  'OPERATION_NOT_FOUND', 'DSH_COMMAND_FAILED', 'BATCH_INSTALL_FAILED', 'POSTCONDITION_FAILED',
+  'RESTART_UNAVAILABLE',
+])
+
 function safePackageName(value: string | undefined): string {
   const name = value?.trim() ?? ''
   if (!NPM_NAME.test(name)) fail('INVALID_NPM_SPEC', 'A valid installed package name is required.')
   return name
+}
+
+function queryLengthBucket(value: string | undefined): string {
+  const length = value?.trim().length ?? 0
+  if (length === 0) return 'empty'
+  if (length <= 10) return '1-10'
+  if (length <= 30) return '11-30'
+  if (length <= 80) return '31-80'
+  return '81+'
 }
 
 function commandResult(result: RunnerResult): MutationResult['command'] {
@@ -157,6 +181,11 @@ function operationError(error: unknown): { code?: string; message: string } {
       : {},
     message: error instanceof Error ? error.message : String(error),
   }
+}
+
+function telemetryErrorCode(error: unknown): string {
+  const code = operationError(error).code
+  return code !== undefined && TELEMETRY_ERROR_CODES.has(code) ? code : 'UNKNOWN'
 }
 
 function installedPackageManifest(profileDir: string, packageName: string): { name?: unknown; version?: unknown } | null {
@@ -189,6 +218,7 @@ export class PluginManager {
   private readonly operations: OperationTracker
   private readonly fetchOptions: Omit<FetchOptions, 'signal'>
   private readonly hmrTimeoutMs: number
+  private readonly telemetry: Telemetry
 
   constructor(dependencies: PluginManagerDependencies) {
     this.profileDir = dependencies.profileDir
@@ -202,6 +232,15 @@ export class PluginManager {
     this.operations = dependencies.operations ?? new OperationTracker()
     this.fetchOptions = dependencies.fetchOptions ?? {}
     this.hmrTimeoutMs = dependencies.hmrTimeoutMs ?? 5_000
+    this.telemetry = dependencies.telemetry ?? { capture() {} }
+  }
+
+  private capture(event: string, properties: Readonly<Record<string, string | number | boolean>> = {}): void {
+    try {
+      this.telemetry.capture(event, properties)
+    } catch {
+      // Analytics is deliberately best-effort and cannot affect plugin operations.
+    }
   }
 
   private loaderEntries(): LoaderEntrySnapshot[] {
@@ -225,6 +264,13 @@ export class PluginManager {
   }
 
   async discover(request: DiscoverRequest, signal?: AbortSignal): Promise<unknown> {
+    this.capture('plugin_manager_used', {
+      surface: 'discover',
+      action: request.action,
+      ...(request.action === 'search'
+        ? { has_query: (request.query?.trim().length ?? 0) > 0, query_length_bucket: queryLengthBucket(request.query) }
+        : {}),
+    })
     if (request.action === 'list') return { profile: 'web', plugins: this.list() }
     if (request.action === 'search') {
       const options: SearchOptions = {
@@ -274,6 +320,11 @@ export class PluginManager {
   }
 
   async plan(request: PlanRequest, signal?: AbortSignal): Promise<ConfirmationPlan> {
+    this.capture('plugin_manager_used', {
+      surface: 'plan',
+      action: request.operation,
+      ...(request.operation === 'install_many' ? { batch_size: request.sources?.length ?? 0 } : {}),
+    })
     if (request.operation === 'install_many') return await this.planInstallMany(request.sources, signal)
     if (request.operation === 'restart') {
       if (!this.restarter.available()) fail('RESTART_UNAVAILABLE', 'Automatic restart is unavailable in this deployment.')
@@ -403,10 +454,29 @@ export class PluginManager {
       if (plan.packageName === undefined) fail('POSTCONDITION_FAILED', 'Mutation plan has no package name.')
       if (plan.action === 'install' || plan.action === 'update') {
         if (plan.installSpec === undefined) fail('POSTCONDITION_FAILED', 'Install/update plan has no immutable source.')
-        return this.withRestartGuidance(
-          await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context),
-          automaticRestartAvailable,
-        )
+        if (plan.action === 'install') this.capture('plugin_install_started', { plugin_name: plan.packageName })
+        try {
+          const result = this.withRestartGuidance(
+            await this.installOrUpdate(plan.action, plan.packageName, plan.installSpec, context),
+            automaticRestartAvailable,
+          )
+          if (plan.action === 'install') {
+            this.capture('plugin_install_succeeded', {
+              plugin_name: plan.packageName,
+              activated: result.activated === true,
+              restart_required: result.restartRequired,
+            })
+          }
+          return result
+        } catch (error) {
+          if (plan.action === 'install') {
+            this.capture('plugin_install_failed', {
+              plugin_name: plan.packageName,
+              error_code: telemetryErrorCode(error),
+            })
+          }
+          throw error
+        }
       }
       if (plan.action === 'remove') {
         return this.withRestartGuidance(await this.remove(plan.packageName, context), automaticRestartAvailable)
@@ -484,6 +554,7 @@ export class PluginManager {
         break
       }
       context.progress(`install_many: ${index + 1}/${items.length} installing ${item.packageName}`)
+      this.capture('plugin_install_started', { plugin_name: item.packageName, batch: true })
       try {
         const result = this.withRestartGuidance(
           await this.installOrUpdate('install', item.packageName, item.installSpec, context),
@@ -495,12 +566,23 @@ export class PluginManager {
           status: this.mutationCompletion(result, automaticRestartAvailable).status,
           result,
         })
+        this.capture('plugin_install_succeeded', {
+          plugin_name: item.packageName,
+          batch: true,
+          activated: result.activated === true,
+          restart_required: result.restartRequired,
+        })
       } catch (error) {
         results.push({
           packageName: item.packageName,
           installSpec: item.installSpec,
           status: context.signal.aborted ? 'cancelled' : 'failed',
           error: operationError(error),
+        })
+        this.capture('plugin_install_failed', {
+          plugin_name: item.packageName,
+          batch: true,
+          error_code: telemetryErrorCode(error),
         })
         skipRemaining(index + 1)
         break

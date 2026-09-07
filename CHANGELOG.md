@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Added
+
+- Explicitly opt-in, personless PostHog analytics for plugin-manager use and
+  manager-executed install start, success, and failure outcomes.
+- A locally persisted random anonymous identifier with IP geolocation disabled;
+  search text, local paths, command output, and error messages are excluded.
+
 ## [0.2.4] - 2026-09-05
 
 ### Changed

@@ -8,6 +8,7 @@ import { profileDirectory } from './profile.ts'
 import { githubSearchProvider, npmSearchProvider, registrySearchProvider } from './providers.ts'
 import { DshRestarter } from './restart.ts'
 import { DshCliRunner } from './runner.ts'
+import { createTelemetry, type TelemetryConfig } from './telemetry.ts'
 
 export const name = 'relay-dsh-plugin-manager'
 export const inject = ['pluginSearch', 'tools', 'commands', 'userQuestions', 'loader']
@@ -16,10 +17,16 @@ export const DEFAULT_REGISTRY_ORIGIN = 'https://dsh-plugins.tech'
 export interface Config {
   allowRestart?: boolean
   registryUrl?: string | false
+  telemetry?: TelemetryConfig
 }
 
 export function apply(ctx: Context, config: Config = {}): void {
   const profileDir = profileDirectory('web')
+  const telemetry = config.telemetry ?? {
+    enabled: process.env.RELAY_PLUGIN_MANAGER_TELEMETRY === '1',
+    host: process.env.RELAY_PLUGIN_MANAGER_POSTHOG_HOST,
+    projectKey: process.env.RELAY_PLUGIN_MANAGER_POSTHOG_KEY,
+  }
   ctx.pluginSearch.register(npmSearchProvider())
   ctx.pluginSearch.register(githubSearchProvider())
   const configuredRegistryUrl = config.registryUrl ?? process.env.DSH_PLUGIN_REGISTRY_URL?.trim()
@@ -33,6 +40,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     hot: new HotRuntime(ctx, profileDir),
     restarter: new DshRestarter({ allowRestart: config.allowRestart }),
     loader: ctx.loader,
+    telemetry: createTelemetry(profileDir, telemetry),
   })
   registerConversationSurface(ctx, manager)
 }
@@ -53,3 +61,4 @@ export type {
   PluginSearchRequest,
 } from './search-runtime.ts'
 export type { PluginInspection, PluginSource } from './source.ts'
+export type { TelemetryConfig } from './telemetry.ts'

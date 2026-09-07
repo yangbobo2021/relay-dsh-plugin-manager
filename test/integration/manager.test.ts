@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PluginManager, type PluginManagerDependencies } from '../../src/manager.ts'
 import { readManagerState, readProfileManifest, writeProfileManifest } from '../../src/profile.ts'
 import type { PluginInspection, PluginSource } from '../../src/source.ts'
+import type { Telemetry } from '../../src/telemetry.ts'
 
 const PACKAGE = 'example-dsh-plugin'
 const VERSION = '1.2.3'
@@ -100,6 +101,7 @@ function manager(
     dynamicLoader?: boolean
     restartAvailable?: boolean
     inspect?: NonNullable<PluginManagerDependencies['inspect']>
+    telemetry?: Telemetry
   } = {},
 ): PluginManager {
   let hotActive = options.hotActive ?? false
@@ -135,6 +137,7 @@ function manager(
       }],
     } : { entries: () => [] },
     hmrTimeoutMs: 20,
+    telemetry: options.telemetry,
   })
 }
 
@@ -195,6 +198,42 @@ describe('PluginManager official-command integration', () => {
     expect(() => subject.execute(plan.confirmationToken)).toThrowError(/already been used/i)
   })
 
+  it('records anonymous manager use and successful installs without query text or local paths', async () => {
+    const dir = await fixture()
+    cleanup.push(dir)
+    const events: Array<{ event: string; properties: Readonly<Record<string, string | number | boolean>> }> = []
+    const telemetry: Telemetry = {
+      capture: (event, properties = {}) => { events.push({ event, properties }) },
+    }
+    const subject = manager(dir, async () => {
+      materializePlugin(dir)
+      writeProfileManifest(dir, {
+        dependencies: { [PACKAGE]: VERSION },
+        dsh: { profile: { bundles: [PACKAGE] } },
+      })
+      return { exitCode: 0, signal: null, stdout: 'added', stderr: '', timedOut: false, cancelled: false }
+    }, { telemetry })
+
+    await subject.discover({ action: 'search', query: 'private customer wording' })
+    const plan = await subject.plan({ operation: 'install', source: PACKAGE })
+    await subject.wait(subject.execute(plan.confirmationToken).id)
+
+    expect(events).toEqual(expect.arrayContaining([
+      {
+        event: 'plugin_manager_used',
+        properties: { surface: 'discover', action: 'search', has_query: true, query_length_bucket: '11-30' },
+      },
+      { event: 'plugin_manager_used', properties: { surface: 'plan', action: 'install' } },
+      { event: 'plugin_install_started', properties: { plugin_name: PACKAGE } },
+      {
+        event: 'plugin_install_succeeded',
+        properties: { plugin_name: PACKAGE, activated: true, restart_required: false },
+      },
+    ]))
+    expect(JSON.stringify(events)).not.toContain('private customer wording')
+    expect(JSON.stringify(events)).not.toContain(dir)
+  })
+
   it('restores the profile manifest when the official install command fails', async () => {
     const dir = await fixture()
     cleanup.push(dir)
@@ -208,6 +247,29 @@ describe('PluginManager official-command integration', () => {
     const completed = await subject.wait(subject.execute(plan.confirmationToken).id)
     expect(completed).toMatchObject({ status: 'failed', error: { code: 'DSH_COMMAND_FAILED' } })
     expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(before)
+  })
+
+  it('records only a bounded error code when an install fails', async () => {
+    const dir = await fixture()
+    cleanup.push(dir)
+    const events: Array<{ event: string; properties: Readonly<Record<string, string | number | boolean>> }> = []
+    const subject = manager(dir, async () => ({
+      exitCode: 1,
+      signal: null,
+      stdout: '',
+      stderr: 'secret command failure text',
+      timedOut: false,
+      cancelled: false,
+    }), { telemetry: { capture: (event, properties = {}) => { events.push({ event, properties }) } } })
+
+    const plan = await subject.plan({ operation: 'install', source: PACKAGE })
+    await subject.wait(subject.execute(plan.confirmationToken).id)
+
+    expect(events).toContainEqual({
+      event: 'plugin_install_failed',
+      properties: { plugin_name: PACKAGE, error_code: 'DSH_COMMAND_FAILED' },
+    })
+    expect(JSON.stringify(events)).not.toContain('secret command failure text')
   })
 
   it('refuses a stale plan and rejects a successful CLI result with the wrong installed version', async () => {

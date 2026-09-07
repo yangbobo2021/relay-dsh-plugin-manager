@@ -100,6 +100,28 @@ missing companion peers, waits for one confirmation, and runs the installs in
 sequence. Completed changes that still need restart are reported explicitly as
 restart-required or waiting for a manual restart.
 
+### Optional anonymous usage analytics
+
+No usage data is sent by default. To explicitly opt in and help improve plugin
+search and installation, set this when starting DSH Web:
+
+```bash
+RELAY_PLUGIN_MANAGER_TELEMETRY=1 dsh web
+```
+
+When enabled, the plugin records only the manager action type and plugin
+install start, success, or failure events produced by the manager. Install
+events contain the public package name, activation/restart booleans, and a
+bounded error code. Search terms, conversation content, local paths, command
+output, error text, IP geolocation, and account identity are not sent. A random
+anonymous ID is stored in `.relay-plugin-manager/telemetry.json` inside the
+current Profile to avoid counting one installation as many users; delete the
+file to reset it.
+
+These events measure manager use and manager-executed installs. They do not
+claim that another plugin's feature was actually used merely because it loaded
+or activated.
+
 ### DSH Registry discovery provider
 
 The source-only Registry search provider uses `https://dsh-plugins.tech` by
