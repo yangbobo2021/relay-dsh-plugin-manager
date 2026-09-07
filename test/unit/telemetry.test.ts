@@ -36,13 +36,34 @@ describe('default-on first-party anonymous telemetry', () => {
 
     expect(send.mock.calls[0]?.[0]).toBe('https://dsh-plugins.tech/v1/telemetry/events')
     expect(bodies[0]).toEqual({
-      schema_version: '1.0.0',
+      schema_version: '1.1.0',
       anonymous_id: id,
       event: 'plugin_manager_used',
       properties: { surface: 'discover', action: 'search', has_query: true, query_length_bucket: '11-30' },
     })
     expect(JSON.stringify(bodies[0])).not.toMatch(/api_key|posthog|\$ip|profile|query.*secret/iu)
     expect(readFileSync(join(dir, '.relay-plugin-manager', 'telemetry.json'), 'utf8')).not.toContain(dir)
+  })
+
+  it('marks only explicitly configured acceptance traffic', async () => {
+    const dir = await temporaryProfile()
+    const bodies: Array<Record<string, unknown>> = []
+    const send = vi.fn<typeof fetch>(async (_input, init) => {
+      bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+      return new Response(null, { status: 202 })
+    })
+
+    createTelemetry(dir, { test: true }, { fetch: send, random: () => id })
+      .capture('plugin_manager_used', { surface: 'discover', action: 'status' })
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+
+    expect(bodies[0]).toEqual({
+      schema_version: '1.1.0',
+      anonymous_id: id,
+      event: 'plugin_manager_used',
+      properties: { surface: 'discover', action: 'status' },
+      is_test: true,
+    })
   })
 
   it('reuses one stable random identifier across manager processes', async () => {

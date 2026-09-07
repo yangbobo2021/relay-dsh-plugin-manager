@@ -110,6 +110,15 @@ set this when starting DSH Web:
 RELAY_PLUGIN_MANAGER_TELEMETRY=0 dsh web
 ```
 
+Registry operators performing a production acceptance run can mark only that
+run as test traffic:
+
+```bash
+RELAY_PLUGIN_MANAGER_TELEMETRY_TEST=1 dsh web
+```
+
+This adds only `is_test: true`; ordinary users do not send the marker.
+
 The manager sends events only to the first-party
 `https://dsh-plugins.tech/v1/telemetry/events` endpoint. The Registry validates
 the exact event schema and forwards accepted events to its PostHog analytics

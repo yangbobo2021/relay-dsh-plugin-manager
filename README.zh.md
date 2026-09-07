@@ -104,6 +104,14 @@ DSH Web 时设置以下变量；关闭统计不会影响插件管理功能：
 RELAY_PLUGIN_MANAGER_TELEMETRY=0 dsh web
 ```
 
+Registry 运营方执行生产验收时，可以只标记该次运行：
+
+```bash
+RELAY_PLUGIN_MANAGER_TELEMETRY_TEST=1 dsh web
+```
+
+该模式只增加 `is_test: true`；普通用户不会发送这个标记。
+
 管理器只向第一方接口 `https://dsh-plugins.tech/v1/telemetry/events` 发送事件；Registry
 会校验严格的事件结构，再把通过校验的事件转发到自己的 PostHog 项目。统计只记录
 管理器操作类型，以及由管理器执行的插件安装开始、成功或失败；安装

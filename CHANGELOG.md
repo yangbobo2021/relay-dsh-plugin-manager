@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## [0.2.6] - 2026-09-07
+
+### Added
+
+- Add the operator-only `RELAY_PLUGIN_MANAGER_TELEMETRY_TEST=1` acceptance mode.
+  Its schema `1.1.0` events carry only `is_test: true`, allowing growth dashboards
+  to exclude production acceptance without changing ordinary anonymous telemetry.
+
+### Compatibility
+
+- Ordinary users remain on default-on anonymous telemetry with the same event
+  fields and opt-out. The Registry continues accepting legacy schema `1.0.0`.
+
 ## [0.2.5] - 2026-09-07
 
 ### Added
@@ -143,3 +156,4 @@ All notable changes to this project are documented here.
 [0.1.0]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0-rc.4...v0.1.0
 [0.1.1]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0...v0.1.1
 [0.2.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.2...v0.2.3
+[0.2.6]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.5...v0.2.6

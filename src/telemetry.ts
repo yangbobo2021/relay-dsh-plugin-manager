@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 const DEFAULT_ENDPOINT = 'https://dsh-plugins.tech/v1/telemetry/events'
 const STATE_DIRECTORY = '.relay-plugin-manager'
 const STATE_FILE = 'telemetry.json'
-const SCHEMA_VERSION = '1.0.0'
+const SCHEMA_VERSION = '1.1.0'
 const EVENTS = new Set([
   'plugin_manager_used',
   'plugin_install_started',
@@ -24,6 +24,8 @@ export interface TelemetryConfig {
   enabled?: boolean
   /** Registry telemetry endpoint. Only the canonical service or localhost is accepted. */
   endpoint?: string
+  /** Marks an operator-controlled acceptance run so analytics can exclude it. */
+  test?: boolean
 }
 
 interface TelemetryRuntime {
@@ -111,6 +113,7 @@ export function createTelemetry(
             anonymous_id: distinctId,
             event,
             properties,
+            ...(config?.test === true ? { is_test: true } : {}),
           }),
           signal: controller.signal,
         }).catch(() => undefined).finally(() => clearTimeout(timeout))
