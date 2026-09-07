@@ -1,11 +1,11 @@
 # 在 DeepSeek Harness 对话中管理插件
 
-> **现已支持 DSH `0.1.2-rc.1`，并保留对 `0.1.2-alpha.3` 的兼容。** 稳定版 `0.2.3` 默认接入了有证据边界的 DSH Registry 搜索。[从 npm 安装](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性证据](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903)。
+> **现已支持 DSH `0.1.2-rc.1`，并保留对 `0.1.2-alpha.3` 的兼容。** 稳定通道已接入有证据边界的 DSH Registry 搜索和匿名运行统计。[从 npm 安装](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [兼容性证据](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903)。
 
-> **发布通道：** `latest` → `0.2.3`。
+> **发布通道：** 安装 `relay-dsh-plugin-manager@latest` 即可获得当前稳定版管理器。
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.3
+npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@latest
 npx @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 

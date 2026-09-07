@@ -1,11 +1,11 @@
 # Manage DeepSeek Harness Plugins from Chat
 
-> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** Stable `0.2.3` adds the default evidence-backed DSH Registry search provider. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
+> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** The stable channel includes the evidence-backed DSH Registry search provider and anonymous operational analytics. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
 
-> **Release channel:** `latest` → `0.2.3`.
+> **Release channel:** install `relay-dsh-plugin-manager@latest` to receive the current stable manager.
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@0.2.3
+npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@latest
 npx @deepseek-ai/dsh@0.1.2-rc.1 web
 ```
 

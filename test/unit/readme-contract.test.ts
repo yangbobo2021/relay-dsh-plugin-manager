@@ -20,6 +20,8 @@ describe('README delivery contract', () => {
     expect(chinese).toContain('[English](README.md) | 中文')
     expect(english).toContain(install)
     expect(chinese).toContain(install)
+    expect(english).not.toMatch(/relay-dsh-plugin-manager@\d/u)
+    expect(chinese).not.toMatch(/relay-dsh-plugin-manager@\d/u)
   })
 
   it('documents KeySync installation and the Relay plugin ecosystem', () => {
