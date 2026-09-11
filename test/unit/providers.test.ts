@@ -5,6 +5,36 @@ function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { 'content-type': 'application/json' } })
 }
 
+function registryEntry(name: string, match: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    entry: {
+      entry_id: `plugin.discovery.${name.replace(/[^a-z0-9]/gu, '').padEnd(24, '0').slice(0, 24)}`,
+      identity: {
+        name,
+        repository_url: `https://github.com/example/${name}`,
+        repository_full_name: `example/${name}`,
+      },
+      imported_content: {
+        description: { 'zh-CN': `${name} 中文说明`, en: `${name} description` },
+        trust: 'untrusted_text',
+      },
+      sources: [{ kind: 'npm', package_name: name, spec: name, exact: false }],
+      resolution: { status: 'source_only' },
+    },
+    match: { score: 1, reason_codes: ['description_term_match'], ...match },
+  }
+}
+
+function registryPayload(candidates: unknown[], options: { snapshot?: string; directoryVersion?: string } = {}): Record<string, unknown> {
+  return {
+    snapshot_id: options.snapshot ?? 'discovery.source.2026-09-11.abc123',
+    ...(options.directoryVersion === undefined ? {} : { directory_version: options.directoryVersion }),
+    candidates,
+    is_final_recommendation: false,
+    grants_install_approval: false,
+  }
+}
+
 describe('built-in search providers', () => {
   it('preserves an exact npm package query even when registry ranking omits it', async () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({
@@ -116,7 +146,7 @@ describe('built-in search providers', () => {
     })
     expect(new URL(String(vi.mocked(fetch).mock.calls[0]![0])).pathname).toBe('/v1/plugins:search')
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]?.body))).toMatchObject({
-      schema_version: '1.0.0', query: '手机远程访问', locale: 'zh-CN', limit: 6,
+      schema_version: '1.0.0', query: '手机远程访问', locale: 'zh-CN', limit: 21,
     })
     expect(results[0]).toMatchObject({
       id: 'registry:plugin.discovery.0123456789abcdef01234567',
@@ -128,6 +158,7 @@ describe('built-in search providers', () => {
         'DSH Registry source snapshot: discovery.awesome-dsh-plugin.2026-09-03.v1-0-2.abc123',
         'Registry discovery record only; compatibility and security not tested',
         'Registry match: description_term_match',
+        'Registry rank fusion: keyword=1, directory=none',
       ],
     })
     expect(results[0]?.sources.every(source => source.kind === 'npm' ? source.version === undefined : source.ref === undefined)).toBe(true)
@@ -142,7 +173,7 @@ describe('built-in search providers', () => {
       query: 'browse workspace files', maxResults: 4, signal: new AbortController().signal,
     })
     expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]?.body))).toMatchObject({
-      query: 'browse workspace files', locale: 'en', limit: 4,
+      query: 'browse workspace files', locale: 'en', limit: 21,
     })
   })
 
@@ -154,7 +185,61 @@ describe('built-in search providers', () => {
     await registrySearchProvider('https://dsh-plugins.tech', fetch).search({
       query: 'terminal', maxResults: 20, signal: new AbortController().signal,
     })
-    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0]![1]?.body))).toMatchObject({ limit: 20 })
+    expect(vi.mocked(fetch).mock.calls.map(call => JSON.parse(String(call[1]?.body)).limit)).toEqual([21, 50])
+  })
+
+  it('PM-028 reranks named technologies and preserves semantic directory evidence', async () => {
+    const claude = registryEntry('relay-dsh-plugin-claude')
+    const codex = registryEntry('relay-dsh-plugin-codex', {
+      retrieval_sources: ['canonical_path', 'capability'],
+      canonical_path_key: 'development/code-agents/codex',
+      canonical_primary_path: [
+        { zh_CN: '开发与代码', en: 'Development & Code' },
+        { zh_CN: '代码智能体', en: 'Coding Agents' },
+        { zh_CN: 'Codex', en: 'Codex' },
+      ],
+      matched_capabilities: ['codex_execution'],
+    })
+    const fetch = vi.fn(async input => new URL(String(input)).pathname.endsWith('plugins:route')
+      ? json(registryPayload([claude, codex], { directoryVersion: 'plugin-directory-semantic-v3-18' }))
+      : json(registryPayload([claude, codex]))) as unknown as typeof globalThis.fetch
+
+    const results = await registrySearchProvider('https://dsh-plugins.tech', fetch).search({
+      query: 'Use Codex for coding inside DSH', maxResults: 20, signal: new AbortController().signal,
+    })
+
+    expect(results[0]?.title).toBe('relay-dsh-plugin-codex')
+    expect(results[0]?.match).toMatchObject({
+      kind: 'registry',
+      strategy: 'keyword-plus-semantic-directory-v1',
+      directoryVersion: 'plugin-directory-semantic-v3-18',
+      canonicalPath: ['Development & Code', 'Coding Agents', 'Codex'],
+      matchedCapabilities: ['codex_execution'],
+    })
+    expect(results[0]?.evidence).toContain('Semantic directory: Development & Code / Coding Agents / Codex')
+  })
+
+  it('PM-028 falls back to the semantic directory when keyword search fails', async () => {
+    const fetch = vi.fn(async input => new URL(String(input)).pathname.endsWith('plugins:search')
+      ? json({ message: 'temporary failure' }, 503)
+      : json(registryPayload([registryEntry('dsh-budget')], { directoryVersion: 'plugin-directory-semantic-v3-18' }))) as unknown as typeof globalThis.fetch
+
+    const results = await registrySearchProvider('https://dsh-plugins.tech', fetch).search({
+      query: 'limit plugin cost', maxResults: 20, signal: new AbortController().signal,
+    })
+
+    expect(results.map(result => result.title)).toEqual(['dsh-budget'])
+    expect(results[0]?.evidence).toContain('Registry rank fusion: keyword=none, directory=1')
+  })
+
+  it('PM-028 rejects keyword and semantic results from different snapshots', async () => {
+    const fetch = vi.fn(async input => new URL(String(input)).pathname.endsWith('plugins:route')
+      ? json(registryPayload([], { snapshot: 'discovery.second.2026-09-11.def456', directoryVersion: 'plugin-directory-semantic-v3-18' }))
+      : json(registryPayload([], { snapshot: 'discovery.first.2026-09-11.abc123' }))) as unknown as typeof globalThis.fetch
+
+    await expect(registrySearchProvider('https://dsh-plugins.tech', fetch).search({
+      query: 'manage plugins', maxResults: 20, signal: new AbortController().signal,
+    })).rejects.toThrow(/different snapshots/u)
   })
 
   it('PM-025 rejects insecure remote endpoints and malformed Registry authority fields', async () => {

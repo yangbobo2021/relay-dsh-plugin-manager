@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+### Changed
+
+- Combine the bounded Registry keyword pool with semantic-directory routing,
+  while preserving exact identifiers, rejecting snapshot mismatch, and safely
+  falling back when either read-only route fails.
+- Replace fixed-count presentation guidance with a smallest-complete-answer
+  contract: cover every distinct solution role and materially different
+  approach, group alternatives, and omit unrelated or duplicate projects.
+
+### Added
+
+- Add a versioned bilingual search acceptance suite that compares keyword and
+  hybrid results for required-role coverage, reviewed false positives,
+  duplicate project identities, and exact package/repository queries. Recall
+  and reciprocal-rank values remain diagnostic rather than release gates.
+
 ## [0.2.6] - 2026-09-07
 
 ### Added

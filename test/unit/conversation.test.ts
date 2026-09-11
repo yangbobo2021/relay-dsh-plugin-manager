@@ -84,8 +84,8 @@ describe('conversation surface', () => {
     const discover = tools.find(tool => tool.name === 'plugin_discover')!
     expect(discover.description).toContain('owner:NAME')
     expect(discover.description).toContain('passed directly to inspect and plan')
-    expect(discover.description).toContain('present every possibly relevant candidate')
-    expect(discover.description).toContain('NEVER silently truncate')
+    expect(discover.description).toContain('smallest complete answer')
+    expect(discover.description).toContain('never repeat npm/GitHub aliases')
     expect(discover.parameters).toMatchObject({
       properties: {
         maxResults: { description: expect.stringContaining('Use 20 for ordinary need-based searches') },

@@ -115,6 +115,24 @@ directly into `inspect`; `recommendedSource` is immutable and can flow directly
 into `plan`. Owner-only identities fail inspection with guidance to use owner
 search instead of falling through to npm validation.
 
+The built-in Registry provider requests a bounded keyword challenger pool and
+the active semantic-directory route concurrently. It validates both responses
+as source-only, non-authorizing discovery data and refuses to combine different
+snapshot ids. Reciprocal-rank fusion lets directory evidence rerank the bounded
+keyword candidates; directory-only candidates are used only when keyword search
+fails, which limits semantic sibling flooding. Exact identifiers and explicit
+technology terms receive deterministic priority. If one route fails, the other
+remains usable; if both fail, the provider reports an isolated provider error.
+
+The final model-facing pool carries canonical path and matched-capability
+evidence. The Agent contract asks for the smallest complete answer rather than a
+fixed top-N: cover every required role and materially different approach, group
+alternatives by role, exclude unrelated rows, and never repeat aliases of one
+project. A checked-in bilingual scenario suite tests role coverage, reviewed
+near-neighbour exclusions, duplicate project identities, and exact identifiers
+against the keyword baseline. Rank metrics remain diagnostics and cannot mask
+either a missed role or a hard-check regression.
+
 No provider callback participates after discovery.
 
 ## Confirmation Plans

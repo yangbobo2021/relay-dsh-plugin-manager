@@ -50,8 +50,9 @@ service.
 | PM-023 | `plugin_manage confirm` owns its DSH question: it validates the token, expiry, and exact Session before asking; supplies a stable plan-specific id, visible plan detail, exact approve/decline options, and `plan-review` intent; and executes in that same tool call only for the exact single approve answer. Declines, malformed or unrelated answers, provider failure/cancellation, and cross-session attempts do not execute or consume a still-valid plan. Generic model-authored question results are never mutation authority. |
 | PM-024 | GitHub owner discovery recognizes `owner:<name>`, owner-only GitHub identities, `<name> DSH plugins`, and conservative bare identifiers containing digits. It sends a typed owner intent to providers, uses GitHub's exact owner qualifier, case-insensitively verifies returned ownership, and ranks verified owner matches first. Owner-only `inspect` fails with an actionable error directing callers to search. Every emitted repository identity is accepted by `inspect`; every recommended immutable source is accepted by `plan`. |
 | PM-025 | Register a read-only DSH Registry provider against `https://dsh-plugins.tech` by default, with an explicit `registryUrl: false` opt-out and HTTPS-only configuration override. Send only the task query, inferred Chinese/English locale and result limit; accept only source-level untrusted DiscoveryEntry records, convert their npm/GitHub descriptors into core-owned source types, and submit them to the same mandatory local inspection used by all providers. Registry responses cannot supply exact versions, approval, plans, installers, or profile state, and provider failure remains isolated. |
-| PM-026 | Return search candidates as one explicit, one-based relevance-ranked result page with a default and maximum size of 20. The model-facing contract requires the Agent to preserve rank order, surface every possibly relevant returned candidate, exclude candidates whose purpose is clearly unrelated, and MUST NOT silently reduce the remaining page to a fixed top-N. Ranking remains distinct from compatibility, security, or installation approval. |
+| PM-026 | Return search candidates as one explicit, one-based relevance-ranked pool with a default and maximum size of 20. The model-facing contract requires the Agent to produce the smallest complete answer: cover every distinct responsibility and materially different solution approach, group alternatives by role, exclude clearly unrelated candidates, merge npm/GitHub aliases of one project, and neither pad nor silently cut the answer to a fixed count. Ranking remains distinct from compatibility, security, or installation approval. |
 | PM-027 | Send default-on anonymous operational telemetry only to the Registry's canonical first-party HTTPS endpoint under schema `1.1.0`, with explicit `RELAY_PLUGIN_MANAGER_TELEMETRY=0` or `telemetry.enabled: false` opt-out. Events are limited to manager discovery/planning type and manager-executed install start/success/failure, including per-plugin batch outcomes. An operator-only `RELAY_PLUGIN_MANAGER_TELEMETRY_TEST=1` or `telemetry.test: true` mode adds only `is_test: true`; ordinary events omit the marker. Never send raw search text, conversation content, Profile state, installed inventory, paths, credentials, command output, error text, account identity, PostHog configuration, or client timestamps. Store only a stable random anonymous ID locally, create it lazily, and never let storage, validation, network, Registry, or analytics failure affect plugin management. |
+| PM-028 | Use the Registry keyword index as a bounded recall baseline and the active semantic directory as reranking evidence, with exact-identifier dominance, named-technology disambiguation, snapshot-consistency checks, and safe single-source fallback. A versioned bilingual scenario suite evaluates the post-inspection, deduplicated result pool for required-role coverage, forbidden near-neighbours, exact identifiers, and duplicate identities. Release comparison may not hide an individual hard-check regression behind aggregate improvement. |
 
 ## Command Grammar
 
@@ -75,9 +76,10 @@ Read-only actions: `list`, `search`, `inspect`, `status`.
 `owner:yangbobo2021`. `inspect` accepts npm sources and all three GitHub
 repository forms from PM-007. An owner without a repository belongs to
 `search`, not `inspect`. Search defaults to a twenty-candidate ranked page. Each
-candidate carries its explicit display rank; the Agent presents all possibly
-relevant returned candidates in that order instead of silently selecting an
-arbitrary top five.
+candidate carries its explicit display rank and semantic-directory evidence
+when available. The Agent builds a minimal complete answer grouped by required
+role and materially different approach. It does not repeat source aliases, pad
+the answer, or silently impose an arbitrary top count.
 
 ### `plugin_manage`
 
@@ -97,7 +99,10 @@ The manager owns inspection, immutable resolution, deduplication, ranking,
 confirmation, installation, rollback, activation, and restart.
 
 Provider scores are not globally comparable. The manager uses them only within
-one provider before deterministic cross-provider ordering.
+one provider before deterministic cross-provider ordering. Inside the Registry
+provider, bounded reciprocal-rank fusion combines keyword order with the active
+semantic-directory route; the keyword pool limits semantic drift and one
+additional challenger permits a directory-supported boundary correction.
 
 The `dsh-registry` provider defaults to `https://dsh-plugins.tech`. Plugin
 configuration `registryUrl` or environment variable `DSH_PLUGIN_REGISTRY_URL`

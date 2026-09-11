@@ -48,10 +48,48 @@ describe('PM-004/PM-005 search orchestration', () => {
       order: 'rank_ascending',
       returnedCandidates: 1,
       requestedMaximum: 20,
-      includeEveryPossiblyRelevant: true,
+      includeEveryDistinctRelevantSolution: true,
       excludeClearlyIrrelevant: true,
+      deduplicateEquivalentSources: true,
+      padToRequestedMaximum: false,
       silentTopNTruncation: false,
     })
+  })
+
+  it('PM-026 merges distinct repositories that declare the same installable package identity', async () => {
+    const provider: PluginSearchProvider = {
+      id: 'catalog',
+      search: async () => [{
+        id: 'one', title: 'first', score: 2,
+        sources: [{ kind: 'github', owner: 'first', repo: 'manager' }],
+      }, {
+        id: 'two', title: 'second', score: 1,
+        sources: [{ kind: 'github', owner: 'second', repo: 'manager-fork' }],
+      }],
+    }
+    const inspect = async (raw: string | PluginSource): Promise<PluginInspection> => {
+      const source = typeof raw === 'string' ? parsePluginSource(raw) : raw
+      if (source.kind !== 'github') throw new Error('fixture expects GitHub')
+      return {
+        source: { ...source, ref: 'a'.repeat(40) },
+        sourceType: 'github',
+        requestedSpec: `github:${source.owner}/${source.repo}`,
+        installSpec: `github:${source.owner}/${source.repo}#${'a'.repeat(40)}`,
+        packageName: 'dsh-plugin-manager',
+        commit: 'a'.repeat(40),
+        repository: `github.com/${source.owner}/${source.repo}`,
+        description: null,
+        bundlePatch: './cordis.patch.yml',
+        client: false,
+        peerDependencies: {},
+      }
+    }
+
+    const result = await searchPlugins({ entries: () => [provider] }, 'dsh-plugin-manager', { inspect })
+
+    expect(result.candidates).toHaveLength(1)
+    expect(result.candidates[0]?.packageName).toBe('dsh-plugin-manager')
+    expect(result.candidates[0]?.sources).toHaveLength(2)
   })
 
   it('PM-026 returns the complete ranked result page instead of an implicit top five', async () => {
@@ -94,6 +132,45 @@ describe('PM-004/PM-005 search orchestration', () => {
     expect(result.candidates.map(candidate => candidate.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
     expect(result.candidates.at(-1)?.packageName).toBe('candidate-8')
     expect(result.presentation.silentTopNTruncation).toBe(false)
+  })
+
+  it('PM-028 exposes semantic path and capability evidence after local inspection', async () => {
+    const provider: PluginSearchProvider = {
+      id: 'dsh-registry',
+      search: async () => [{
+        id: 'registry:codex',
+        title: 'relay-dsh-plugin-codex',
+        sources: [{ kind: 'npm', package: 'relay-dsh-plugin-codex' }],
+        match: {
+          kind: 'registry',
+          strategy: 'keyword-plus-semantic-directory-v1',
+          snapshotId: 'discovery.source.2026-09-11.abc123',
+          directoryVersion: 'plugin-directory-semantic-v3-18',
+          retrievalSources: ['canonical_path', 'capability'],
+          keywordReasonCodes: ['description_term_match'],
+          canonicalPathKey: 'development/code-agents/codex',
+          canonicalPath: ['开发与代码', '代码智能体', 'Codex'],
+          matchedCapabilities: ['codex_execution'],
+          exactIdentifier: false,
+        },
+      }],
+    }
+
+    const result = await searchPlugins({ entries: () => [provider] }, '使用 Codex', {
+      inspect: async source => inspection(typeof source === 'string' ? parsePluginSource(source) : source),
+    })
+
+    expect(result.candidates[0]?.matchReasons).toEqual([
+      'Semantic directory: 开发与代码 / 代码智能体 / Codex',
+      'Matched capabilities: codex_execution',
+    ])
+    expect(result.candidates[0]?.semanticMatches).toEqual([{
+      directoryVersion: 'plugin-directory-semantic-v3-18',
+      canonicalPathKey: 'development/code-agents/codex',
+      canonicalPath: ['开发与代码', '代码智能体', 'Codex'],
+      matchedCapabilities: ['codex_execution'],
+      retrievalSources: ['canonical_path', 'capability'],
+    }])
   })
 
   it('times out one provider without blocking a healthy sibling', async () => {

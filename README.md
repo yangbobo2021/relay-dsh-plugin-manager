@@ -147,10 +147,13 @@ This provider sends only the task query, inferred Chinese/English locale, and
 result limit. Returned candidates are
 always inspected locally through the same npm/GitHub flow before any plan can be
 created; Registry descriptions are untrusted text and cannot authorize changes.
-Search returns one relevance-ranked page (twenty candidates by default). The
-Agent is instructed to preserve that order and show every possibly relevant
-candidate instead of silently shortening the page to a fixed top five; results
-whose plugin purpose is clearly unrelated to the request are excluded.
+Search combines a bounded keyword pool with the active semantic directory, then
+locally inspects and merges npm/GitHub aliases by project identity. The Agent
+builds the smallest complete answer from the resulting pool: every distinct
+responsibility and materially different solution approach is covered, related
+alternatives are grouped by role, and clearly unrelated or duplicate candidates
+are omitted. It neither pads the answer to twenty nor silently cuts it to an
+arbitrary top count. Exact package and repository queries remain rank one.
 
 ## Part of Relay
 

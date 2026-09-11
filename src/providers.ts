@@ -2,7 +2,14 @@ import type { PluginSearchProvider } from './search-runtime.ts'
 import { isGithubPart, NPM_NAME } from './source.ts'
 
 const MAX_PROVIDER_RESULTS = 20
+const REGISTRY_KEYWORD_CHALLENGER_POOL = 21
+const REGISTRY_DIRECTORY_POOL = 50
+const RECIPROCAL_RANK_OFFSET = 20
+const KEYWORD_RANK_WEIGHT = 0.1
+const DIRECTORY_RANK_WEIGHT = 0.2
+const IDENTITY_TERM_BOOST = 0.01
 const REGISTRY_SNAPSHOT_ID = /^discovery\.[a-z0-9.-]+$/u
+const REGISTRY_DIRECTORY_VERSION = /^[a-z0-9][a-z0-9._-]{0,127}$/u
 
 function query(value: string): string {
   const normalized = value.trim()
@@ -45,6 +52,7 @@ export function npmSearchProvider(fetchImpl: typeof globalThis.fetch = globalThi
         sources: [{ kind: 'npm' as const, package: text }],
         score: Number.MAX_SAFE_INTEGER,
         evidence: ['Exact npm package-name query'],
+        match: { kind: 'exact-identifier' as const, value: text },
       }, ...searched]
     },
   }
@@ -126,7 +134,7 @@ export function githubSearchProvider(
   }
 }
 
-function registryEndpoint(value: string): string {
+function registryEndpoint(value: string, operation: 'search' | 'route'): string {
   let url: URL
   try { url = new URL(value) } catch { throw new Error('Registry URL must be an absolute URL.') }
   const local = url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '::1'
@@ -136,7 +144,7 @@ function registryEndpoint(value: string): string {
   if (url.username !== '' || url.password !== '' || url.search !== '' || url.hash !== '') {
     throw new Error('Registry URL cannot contain credentials, query parameters, or a fragment.')
   }
-  url.pathname = `${url.pathname.replace(/\/$/u, '')}/v1/plugins:search`
+  url.pathname = `${url.pathname.replace(/\/$/u, '')}/v1/plugins:${operation}`
   return url.href
 }
 
@@ -148,7 +156,32 @@ function queryLocale(value: string): 'zh-CN' | 'en' {
   return /\p{Script=Han}/u.test(value) ? 'zh-CN' : 'en'
 }
 
-function registryCandidate(value: unknown, snapshotId: string): Awaited<ReturnType<PluginSearchProvider['search']>>[number] | null {
+interface RegistryResponseMetadata {
+  snapshotId: string
+  strategy: 'keyword' | 'keyword-plus-semantic-directory-v1'
+  directoryVersion?: string
+  locale: 'zh-CN' | 'en'
+}
+
+function safeCodes(value: unknown, maximum = 20): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && /^[a-z0-9._-]+$/u.test(item)).slice(0, maximum)
+    : []
+}
+
+function safePath(value: unknown, locale: 'zh-CN' | 'en'): string[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(item => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) return []
+    const path = item as { en?: unknown; zh_CN?: unknown }
+    const label = locale === 'en'
+      ? boundedText(path.en, 200) ?? boundedText(path.zh_CN, 200)
+      : boundedText(path.zh_CN, 200) ?? boundedText(path.en, 200)
+    return label === undefined ? [] : [label]
+  }).slice(0, 8)
+}
+
+function registryCandidate(value: unknown, metadata: RegistryResponseMetadata): Awaited<ReturnType<PluginSearchProvider['search']>>[number] | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   const candidate = value as {
     entry?: {
@@ -158,7 +191,15 @@ function registryCandidate(value: unknown, snapshotId: string): Awaited<ReturnTy
       sources?: unknown
       resolution?: { status?: unknown }
     }
-    match?: { score?: unknown; reason_codes?: unknown }
+    match?: {
+      score?: unknown
+      reason_codes?: unknown
+      retrieval_sources?: unknown
+      keyword_reason_codes?: unknown
+      canonical_path_key?: unknown
+      canonical_primary_path?: unknown
+      matched_capabilities?: unknown
+    }
   }
   const entry = candidate.entry
   if (typeof entry !== 'object' || entry === null
@@ -187,9 +228,12 @@ function registryCandidate(value: unknown, snapshotId: string): Awaited<ReturnTy
   const zh = boundedText(entry.imported_content?.description?.['zh-CN'])
   const en = boundedText(entry.imported_content?.description?.en)
   const repository = boundedText(entry.identity?.repository_url, 500)
-  const reasonCodes = Array.isArray(candidate.match?.reason_codes)
-    ? candidate.match.reason_codes.filter((item): item is string => typeof item === 'string' && /^[a-z0-9_]+$/u.test(item)).slice(0, 8)
-    : []
+  const reasonCodes = safeCodes(candidate.match?.reason_codes ?? candidate.match?.keyword_reason_codes, 8)
+  const retrievalSources = safeCodes(candidate.match?.retrieval_sources, 8)
+  const canonicalPathKey = boundedText(candidate.match?.canonical_path_key, 500)
+  const canonicalPath = safePath(candidate.match?.canonical_primary_path, metadata.locale)
+  const matchedCapabilities = safeCodes(candidate.match?.matched_capabilities, 8)
+  const exactIdentifier = reasonCodes.includes('exact_identifier')
   const score = typeof candidate.match?.score === 'number' && Number.isFinite(candidate.match.score) && candidate.match.score >= 0
     ? candidate.match.score
     : undefined
@@ -201,40 +245,185 @@ function registryCandidate(value: unknown, snapshotId: string): Awaited<ReturnTy
     sources,
     ...(score === undefined ? {} : { score }),
     evidence: [
-      `DSH Registry source snapshot: ${snapshotId}`,
+      `DSH Registry source snapshot: ${metadata.snapshotId}`,
+      ...(metadata.directoryVersion === undefined ? [] : [`DSH Registry directory version: ${metadata.directoryVersion}`]),
+      ...(canonicalPath.length === 0 ? [] : [`Semantic directory: ${canonicalPath.join(' / ')}`]),
+      ...(matchedCapabilities.length === 0 ? [] : [`Matched capabilities: ${matchedCapabilities.join(', ')}`]),
       'Registry discovery record only; compatibility and security not tested',
       ...reasonCodes.map(code => `Registry match: ${code}`),
     ],
+    match: {
+      kind: 'registry',
+      strategy: metadata.strategy,
+      snapshotId: metadata.snapshotId,
+      ...(metadata.directoryVersion === undefined ? {} : { directoryVersion: metadata.directoryVersion }),
+      retrievalSources,
+      keywordReasonCodes: reasonCodes,
+      ...(canonicalPathKey === undefined ? {} : { canonicalPathKey }),
+      canonicalPath,
+      matchedCapabilities,
+      exactIdentifier,
+    },
   }
+}
+
+interface ParsedRegistryResponse {
+  metadata: RegistryResponseMetadata
+  candidates: Awaited<ReturnType<PluginSearchProvider['search']>>
+}
+
+async function parseRegistryResponse(
+  response: Response,
+  strategy: RegistryResponseMetadata['strategy'],
+  locale: RegistryResponseMetadata['locale'],
+): Promise<ParsedRegistryResponse> {
+  if (!response.ok) throw new Error(`DSH Registry ${strategy === 'keyword' ? 'search' : 'directory route'} returned HTTP ${response.status}`)
+  const data = await response.json() as {
+    snapshot_id?: unknown
+    directory_version?: unknown
+    candidates?: unknown
+    is_final_recommendation?: unknown
+    grants_install_approval?: unknown
+  }
+  const directoryVersion = strategy === 'keyword-plus-semantic-directory-v1'
+    && typeof data.directory_version === 'string'
+    && REGISTRY_DIRECTORY_VERSION.test(data.directory_version)
+    ? data.directory_version
+    : undefined
+  if (typeof data.snapshot_id !== 'string' || !REGISTRY_SNAPSHOT_ID.test(data.snapshot_id)
+    || !Array.isArray(data.candidates)
+    || data.is_final_recommendation === true
+    || data.grants_install_approval === true
+    || (strategy === 'keyword-plus-semantic-directory-v1' && directoryVersion === undefined)) {
+    throw new Error('DSH Registry search returned an invalid discovery response.')
+  }
+  const metadata: RegistryResponseMetadata = {
+    snapshotId: data.snapshot_id,
+    strategy,
+    locale,
+    ...(directoryVersion === undefined ? {} : { directoryVersion }),
+  }
+  return {
+    metadata,
+    candidates: data.candidates.flatMap(candidate => {
+      const normalized = registryCandidate(candidate, metadata)
+      return normalized === null ? [] : [normalized]
+    }),
+  }
+}
+
+const IDENTITY_STOP_TERMS = new Set([
+  'and', 'dsh', 'for', 'from', 'inside', 'into', 'plugin', 'plugins', 'the', 'use', 'using', 'with',
+])
+
+function identityTermCoverage(searchText: string, candidate: Awaited<ReturnType<PluginSearchProvider['search']>>[number]): number {
+  const terms = [...new Set(searchText.toLowerCase().match(/[a-z0-9@]+/gu) ?? [])]
+    .filter(term => term.length >= 3 && !IDENTITY_STOP_TERMS.has(term))
+  if (terms.length === 0) return 0
+  const identityTerms = new Set(`${candidate.title} ${candidate.repository ?? ''}`.toLowerCase().split(/[^a-z0-9@]+/gu).filter(Boolean))
+  return terms.filter(term => identityTerms.has(term)).length / terms.length
+}
+
+function mergeRegistryRankings(
+  searchText: string,
+  keyword: ParsedRegistryResponse | null,
+  directory: ParsedRegistryResponse | null,
+  limit: number,
+): Awaited<ReturnType<PluginSearchProvider['search']>> {
+  type Ranked = { candidate: Awaited<ReturnType<PluginSearchProvider['search']>>[number]; score: number; keywordRank?: number; directoryRank?: number }
+  const combined = new Map<string, Ranked>()
+  for (const [source, response, weight] of [
+    ['keyword', keyword, KEYWORD_RANK_WEIGHT],
+    ['directory', directory, DIRECTORY_RANK_WEIGHT],
+  ] as const) {
+    if (response === null) continue
+    response.candidates.forEach((candidate, index) => {
+      // When keyword search is healthy, the directory may rerank its bounded
+      // candidate pool but cannot flood the page with loosely related siblings.
+      if (source === 'directory' && keyword !== null && !combined.has(candidate.id)) return
+      const current = combined.get(candidate.id) ?? { candidate, score: 0 }
+      current.score += weight / (RECIPROCAL_RANK_OFFSET + index + 1)
+      if (source === 'keyword') current.keywordRank = index + 1
+      else {
+        current.directoryRank = index + 1
+        current.candidate = candidate
+      }
+      combined.set(candidate.id, current)
+    })
+  }
+  return [...combined.values()].map(item => {
+    const keywordMatch = keyword?.candidates.find(candidate => candidate.id === item.candidate.id)?.match
+    const directoryMatch = directory?.candidates.find(candidate => candidate.id === item.candidate.id)?.match
+    const exactIdentifier = (keywordMatch?.kind === 'registry' && keywordMatch.exactIdentifier)
+      || (directoryMatch?.kind === 'registry' && directoryMatch.exactIdentifier)
+    const registryMatch = directoryMatch?.kind === 'registry'
+      ? directoryMatch
+      : keywordMatch?.kind === 'registry' ? keywordMatch : null
+    const score = item.score
+      + IDENTITY_TERM_BOOST * identityTermCoverage(searchText, item.candidate)
+      + (exactIdentifier ? 1 : 0)
+    return {
+      ...item.candidate,
+      score,
+      ...(registryMatch === null ? {} : {
+        match: {
+          ...registryMatch,
+          strategy: directory === null ? 'keyword' as const : 'keyword-plus-semantic-directory-v1' as const,
+          keywordReasonCodes: keywordMatch?.kind === 'registry' ? keywordMatch.keywordReasonCodes : registryMatch.keywordReasonCodes,
+          exactIdentifier,
+        },
+      }),
+      evidence: [
+        ...item.candidate.evidence ?? [],
+        `Registry rank fusion: keyword=${String(item.keywordRank ?? 'none')}, directory=${String(item.directoryRank ?? 'none')}`,
+      ],
+    }
+  }).sort((left, right) => (right.score ?? 0) - (left.score ?? 0) || left.id.localeCompare(right.id)).slice(0, limit)
+}
+
+export interface RegistrySearchProviderOptions {
+  strategy?: 'keyword' | 'hybrid'
 }
 
 export function registrySearchProvider(
   baseUrl: string,
   fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+  options: RegistrySearchProviderOptions = {},
 ): PluginSearchProvider {
-  const endpoint = registryEndpoint(baseUrl)
+  const keywordEndpoint = registryEndpoint(baseUrl, 'search')
+  const directoryEndpoint = registryEndpoint(baseUrl, 'route')
+  const strategy = options.strategy ?? 'hybrid'
   return {
     id: 'dsh-registry',
     async search(request) {
       const text = query(request.query)
-      const response = await fetchImpl(endpoint, {
+      const locale = queryLocale(text)
+      const outputLimit = Math.min(request.maxResults, MAX_PROVIDER_RESULTS)
+      const requestEndpoint = async (endpoint: string, responseStrategy: RegistryResponseMetadata['strategy'], limit: number) => parseRegistryResponse(await fetchImpl(endpoint, {
         method: 'POST',
         signal: request.signal,
         headers: { accept: 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({
-          schema_version: '1.0.0', query: text, locale: queryLocale(text),
-          limit: Math.min(request.maxResults, MAX_PROVIDER_RESULTS),
-        }),
-      })
-      if (!response.ok) throw new Error(`DSH Registry search returned HTTP ${response.status}`)
-      const data = await response.json() as { snapshot_id?: unknown; candidates?: unknown }
-      if (typeof data.snapshot_id !== 'string' || !REGISTRY_SNAPSHOT_ID.test(data.snapshot_id) || !Array.isArray(data.candidates)) {
-        throw new Error('DSH Registry search returned an invalid discovery response.')
+        body: JSON.stringify({ schema_version: '1.0.0', query: text, locale, limit }),
+      }), responseStrategy, locale)
+      if (strategy === 'keyword') {
+        return (await requestEndpoint(keywordEndpoint, 'keyword', outputLimit)).candidates.slice(0, outputLimit)
       }
-      return data.candidates.flatMap(candidate => {
-        const normalized = registryCandidate(candidate, data.snapshot_id as string)
-        return normalized === null ? [] : [normalized]
-      }).slice(0, Math.min(request.maxResults, MAX_PROVIDER_RESULTS))
+      const [keywordResult, directoryResult] = await Promise.allSettled([
+        requestEndpoint(keywordEndpoint, 'keyword', REGISTRY_KEYWORD_CHALLENGER_POOL),
+        requestEndpoint(directoryEndpoint, 'keyword-plus-semantic-directory-v1', REGISTRY_DIRECTORY_POOL),
+      ])
+      const keyword = keywordResult.status === 'fulfilled' ? keywordResult.value : null
+      const directory = directoryResult.status === 'fulfilled' ? directoryResult.value : null
+      if (keyword === null && directory === null) {
+        const reasons = [keywordResult, directoryResult].map(result => result.status === 'rejected'
+          ? result.reason instanceof Error ? result.reason.message : String(result.reason)
+          : '').filter(Boolean)
+        throw new Error(`DSH Registry search failed: ${reasons.join('; ')}`)
+      }
+      if (keyword !== null && directory !== null && keyword.metadata.snapshotId !== directory.metadata.snapshotId) {
+        throw new Error('DSH Registry keyword and directory responses reference different snapshots.')
+      }
+      return mergeRegistryRankings(text, keyword, directory, outputLimit)
     },
   }
 }

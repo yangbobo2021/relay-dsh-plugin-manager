@@ -1,0 +1,217 @@
+{
+  "schema_version": "1.0.0",
+  "suite_id": "plugin-manager-search.2026-09-11.v1",
+  "data_class": "evaluation",
+  "production_eligible": false,
+  "evaluation_unit": "post_inspection_final_candidate_rank",
+  "result_limit": 20,
+  "policy": {
+    "required_is_hard_gate": true,
+    "acceptable_is_diagnostic_only": true,
+    "forbidden_rank_is_hard_gate": true,
+    "both_locales_are_required": true,
+    "composition_requires_every_required_role": true,
+    "duplicate_project_identity_is_hard_gate": true,
+    "rank_metrics_are_diagnostic_only": true
+  },
+  "coverage": [
+    "bilingual_task_wording",
+    "adjacent_capability_disambiguation",
+    "named_backend_disambiguation",
+    "multi_plugin_composition",
+    "distinct_solution_role_coverage",
+    "duplicate_project_identity_rejection",
+    "third_party_npm",
+    "github_only_source",
+    "exact_identifier_regression"
+  ],
+  "cases": [
+    {
+      "scenario_id": "use-codex-not-claude",
+      "tags": ["named_backend", "negative_pair"],
+      "task": { "zh-CN": "在 DSH 中使用 Codex 完成编程任务", "en": "Use Codex for coding inside DSH" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "codex_execution_backend", "kind": "npm_package", "value": "relay-dsh-plugin-codex", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-codex-connect" }],
+        "forbidden": [{ "role": "wrong_named_backend", "kind": "npm_package", "value": "relay-dsh-plugin-claude", "max_rank": 5 }]
+      }
+    },
+    {
+      "scenario_id": "use-claude-not-codex",
+      "tags": ["named_backend", "negative_pair"],
+      "task": { "zh-CN": "在 DSH 中使用 Claude Code", "en": "Use Claude Code inside DSH" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "claude_execution_backend", "kind": "npm_package", "value": "relay-dsh-plugin-claude", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-claude-code" }],
+        "forbidden": [{ "role": "wrong_named_backend", "kind": "npm_package", "value": "relay-dsh-plugin-codex", "max_rank": 5 }]
+      }
+    },
+    {
+      "scenario_id": "browse-files-not-terminal",
+      "tags": ["adjacent_capability", "negative_pair"],
+      "task": { "zh-CN": "浏览、筛选并预览当前工作区文件", "en": "Browse, filter, and preview workspace files" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "workspace_file_browser", "kind": "npm_package", "value": "relay-dsh-plugin-files", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "@jiyr0119/dsh-workspace-explorer" }],
+        "forbidden": [{ "role": "adjacent_but_unrequested_terminal", "kind": "npm_package", "value": "relay-dsh-plugin-terminal", "max_rank": 5 }]
+      }
+    },
+    {
+      "scenario_id": "run-terminal-not-file-viewer",
+      "tags": ["adjacent_capability", "negative_pair"],
+      "task": { "zh-CN": "在 DSH 中打开交互式终端并运行命令", "en": "Open an interactive terminal in DSH and run commands" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "interactive_terminal", "kind": "npm_package", "value": "relay-dsh-plugin-terminal", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-bash-terminal" }],
+        "forbidden": [{ "role": "adjacent_but_unrequested_file_browser", "kind": "npm_package", "value": "relay-dsh-plugin-files", "max_rank": 5 }]
+      }
+    },
+    {
+      "scenario_id": "manage-plugins",
+      "tags": ["lifecycle", "first_party"],
+      "task": { "zh-CN": "按任务搜索、检查和管理 DSH 插件", "en": "Search, inspect, and manage DSH plugins by task" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "plugin_discovery_and_management", "kind": "npm_package", "value": "relay-dsh-plugin-manager", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-plugin-mgr" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "create-skill-from-conversation",
+      "tags": ["workflow", "specific_action"],
+      "task": { "zh-CN": "把完成的 DSH 对话制作成可复用技能", "en": "Turn a completed DSH conversation into a reusable skill" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "conversation_to_skill_conversion", "kind": "npm_package", "value": "relay-dsh-plugin-skill-creator", "max_rank": 10 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-skill-studio" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "observe-process-composition",
+      "tags": ["composition", "runtime_monitor"],
+      "task": { "zh-CN": "持续观察本地程序，直到它结束", "en": "Observe a local process until it exits" },
+      "solution_scope": "plugin_composition",
+      "expected": {
+        "required": [
+          { "role": "process_state_reader", "kind": "npm_package", "value": "relay-dsh-plugin-monitor-process", "max_rank": 20 },
+          { "role": "durable_monitor_scheduler", "kind": "npm_package", "value": "relay-dsh-plugin-monitors", "max_rank": 20 }
+        ],
+        "acceptable": [],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "deadline-composition",
+      "tags": ["composition", "time_monitor"],
+      "task": { "zh-CN": "让任务等待到指定时间后继续", "en": "Resume a task after a specified deadline" },
+      "solution_scope": "plugin_composition",
+      "expected": {
+        "required": [
+          { "role": "deadline_condition_reader", "kind": "npm_package", "value": "relay-dsh-plugin-monitor-time", "max_rank": 20 },
+          { "role": "durable_monitor_scheduler", "kind": "npm_package", "value": "relay-dsh-plugin-monitors", "max_rank": 20 }
+        ],
+        "acceptable": [],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "resume-on-external-event",
+      "tags": ["event", "specific_action"],
+      "task": { "zh-CN": "外部事件到达后继续原来的 DSH 会话", "en": "Resume the original DSH session when an external event arrives" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "external_event_session_resume", "kind": "npm_package", "value": "relay-dsh-plugin-events", "max_rank": 20 }],
+        "acceptable": [],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "semantic-event-routing",
+      "tags": ["event", "semantic_routing"],
+      "task": { "zh-CN": "根据语义把外部事件送到正确的 DSH 会话", "en": "Route an external event to the correct DSH session by meaning" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "semantic_event_routing", "kind": "npm_package", "value": "relay-dsh-plugin-semantic-router", "max_rank": 20 }],
+        "acceptable": [],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "remote-phone-access",
+      "tags": ["third_party", "remote_access"],
+      "task": { "zh-CN": "使用手机安全地远程访问 DSH", "en": "Access DSH remotely from a phone" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "secure_mobile_remote_access", "kind": "npm_package", "value": "dsh-remote-mobile", "max_rank": 10 }],
+        "acceptable": [{ "kind": "npm_package", "value": "@linxin666/dsh-remote-web-ui" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "send-to-lark",
+      "tags": ["third_party", "named_integration", "bilingual_alias"],
+      "task": { "zh-CN": "把 DSH 的任务结果发送到飞书", "en": "Send DSH task results to Lark" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "lark_result_delivery", "kind": "npm_package", "value": "dsh-lark-bot", "max_rank": 10 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-lark-channel" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "long-term-memory",
+      "tags": ["third_party", "persistent_state"],
+      "task": { "zh-CN": "让 DSH 保存可以跨会话使用的长期记忆", "en": "Give DSH long-term memory across sessions" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "cross_session_long_term_memory", "kind": "npm_package", "value": "dsh-git-memory", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "@hr98w/dsh-memory" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "browser-automation",
+      "tags": ["third_party", "browser_control"],
+      "task": { "zh-CN": "让 DSH 自动打开并操作网页", "en": "Let DSH open and operate web pages automatically" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "browser_automation", "kind": "npm_package", "value": "@wxg-prc-cpg/browser-skill-dsh-plugin", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-builtin-browser" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "review-git-diff",
+      "tags": ["github_only", "code_review"],
+      "task": { "zh-CN": "以可交互方式审查 Git diff", "en": "Review a Git diff interactively" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "interactive_git_diff_review", "kind": "repository", "value": "BrambleXu/dsh-revdiff", "max_rank": 20 }],
+        "acceptable": [{ "kind": "npm_package", "value": "@yangzhe1991/dsh-code-review" }],
+        "forbidden": []
+      }
+    },
+    {
+      "scenario_id": "per-plugin-budget",
+      "tags": ["third_party", "semantic_specificity"],
+      "task": { "zh-CN": "限制每个插件的模型用量和费用", "en": "Limit model usage and cost for each plugin" },
+      "solution_scope": "single_plugin",
+      "expected": {
+        "required": [{ "role": "per_plugin_usage_budget", "kind": "npm_package", "value": "dsh-budget", "max_rank": 10 }],
+        "acceptable": [{ "kind": "npm_package", "value": "dsh-cost-meter" }],
+        "forbidden": []
+      }
+    }
+  ],
+  "exact_queries": [
+    { "query": "relay-dsh-plugin-manager", "kind": "npm_package", "value": "relay-dsh-plugin-manager", "max_rank": 1 },
+    { "query": "dsh-budget", "kind": "npm_package", "value": "dsh-budget", "max_rank": 1 },
+    { "query": "BrambleXu/dsh-revdiff", "kind": "repository", "value": "BrambleXu/dsh-revdiff", "max_rank": 1 }
+  ]
+}

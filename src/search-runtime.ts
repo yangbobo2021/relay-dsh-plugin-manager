@@ -13,9 +13,23 @@ export interface PluginSearchRequest {
   }
 }
 
-export interface PluginSearchMatch {
+export type PluginSearchMatch = {
   kind: 'github-owner'
   value: string
+} | {
+  kind: 'exact-identifier'
+  value: string
+} | {
+  kind: 'registry'
+  strategy: 'keyword' | 'keyword-plus-semantic-directory-v1'
+  snapshotId: string
+  directoryVersion?: string
+  retrievalSources: string[]
+  keywordReasonCodes: string[]
+  canonicalPathKey?: string
+  canonicalPath: string[]
+  matchedCapabilities: string[]
+  exactIdentifier: boolean
 }
 
 export interface PluginSearchCandidate {

@@ -32,6 +32,13 @@ export interface SearchResult {
     repositoryOwner: string | null
     providers: string[]
     matchReasons: string[]
+    semanticMatches: Array<{
+      directoryVersion: string | null
+      canonicalPathKey: string | null
+      canonicalPath: string[]
+      matchedCapabilities: string[]
+      retrievalSources: string[]
+    }>
     sources: SearchResultSource[]
     recommendedSource: string
   }>
@@ -39,8 +46,10 @@ export interface SearchResult {
     order: 'rank_ascending'
     returnedCandidates: number
     requestedMaximum: number
-    includeEveryPossiblyRelevant: true
+    includeEveryDistinctRelevantSolution: true
     excludeClearlyIrrelevant: true
+    deduplicateEquivalentSources: true
+    padToRequestedMaximum: false
     silentTopNTruncation: false
   }
   providerErrors: Array<{ provider: string; error: string }>
@@ -155,6 +164,33 @@ function candidateSources(provider: string, rows: readonly PluginSearchCandidate
   return output
 }
 
+function candidateMatchReasons(match: PluginSearchCandidate['match']): string[] {
+  if (match?.kind === 'github-owner') return []
+  if (match?.kind === 'exact-identifier') return [`Exact identifier: ${match.value}`]
+  if (match?.kind !== 'registry') return []
+  return [
+    ...(match.exactIdentifier ? ['Exact Registry identifier'] : []),
+    ...(match.canonicalPath.length === 0 ? [] : [`Semantic directory: ${match.canonicalPath.join(' / ')}`]),
+    ...(match.matchedCapabilities.length === 0 ? [] : [`Matched capabilities: ${match.matchedCapabilities.join(', ')}`]),
+  ]
+}
+
+function matchPriority(match: PluginSearchCandidate['match'], exactOwner: boolean): number {
+  if (exactOwner || match?.kind === 'exact-identifier' || (match?.kind === 'registry' && match.exactIdentifier)) return 0
+  return 1
+}
+
+function semanticMatch(match: PluginSearchCandidate['match']): SearchResult['candidates'][number]['semanticMatches'][number] | null {
+  if (match?.kind !== 'registry' || (match.canonicalPath.length === 0 && match.matchedCapabilities.length === 0)) return null
+  return {
+    directoryVersion: match.directoryVersion ?? null,
+    canonicalPathKey: match.canonicalPathKey ?? null,
+    canonicalPath: [...match.canonicalPath],
+    matchedCapabilities: [...match.matchedCapabilities],
+    retrievalSources: [...match.retrievalSources],
+  }
+}
+
 export async function searchPlugins(
   runtime: Pick<PluginSearchRuntime, 'entries'>,
   rawQuery: string,
@@ -199,22 +235,53 @@ export async function searchPlugins(
     }
   }))
 
-  const projects = new Map<string, Omit<SearchResult['candidates'][number], 'rank'> & {
+  const accepted = inspected.flatMap(result => result.ok ? [result] : [])
+  const parent = accepted.map((_, index) => index)
+  const root = (index: number): number => {
+    let current = index
+    while (parent[current] !== current) current = parent[current]!
+    while (parent[index] !== index) {
+      const next = parent[index]!
+      parent[index] = current
+      index = next
+    }
+    return current
+  }
+  const join = (left: number, right: number): void => {
+    const leftRoot = root(left)
+    const rightRoot = root(right)
+    if (leftRoot === rightRoot) return
+    parent[Math.max(leftRoot, rightRoot)] = Math.min(leftRoot, rightRoot)
+  }
+  const aliasOwner = new Map<string, number>()
+  for (const [index, result] of accepted.entries()) {
+    const aliases = [
+      `package:${result.inspection.packageName.toLowerCase()}`,
+      ...(result.inspection.repository === null ? [] : [`repository:${result.inspection.repository.toLowerCase()}`]),
+    ]
+    for (const alias of aliases) {
+      const owner = aliasOwner.get(alias)
+      if (owner === undefined) aliasOwner.set(alias, index)
+      else join(index, owner)
+    }
+  }
+
+  const projects = new Map<number, Omit<SearchResult['candidates'][number], 'rank'> & {
     rank: number
     matchPriority: number
   }>()
-  let rejectedCandidates = 0
-  for (const result of inspected) {
-    if (!result.ok) {
-      rejectedCandidates += 1
-      continue
-    }
+  const rejectedCandidates = inspected.length - accepted.length
+  for (const [acceptedIndex, result] of accepted.entries()) {
+    const project = root(acceptedIndex)
     const identity = inspectionIdentity(result.inspection)
     const repositoryOwner = /^github\.com\/([^/]+)\//iu
       .exec(result.inspection.repository ?? '')?.[1]?.toLowerCase() ?? null
-    const exactOwner = result.item.match?.kind === 'github-owner'
-      && repositoryOwner === result.item.match.value.toLowerCase()
-    const existing = projects.get(identity) ?? {
+    const exactOwnerValue = result.item.match?.kind === 'github-owner' ? result.item.match.value : null
+    const exactOwner = exactOwnerValue !== null
+      && repositoryOwner === exactOwnerValue.toLowerCase()
+    const reasons = candidateMatchReasons(result.item.match)
+    const semantic = semanticMatch(result.item.match)
+    const existing = projects.get(project) ?? {
       identity,
       packageName: result.inspection.packageName,
       description: result.inspection.description,
@@ -222,16 +289,20 @@ export async function searchPlugins(
       repositoryOwner,
       providers: [],
       matchReasons: [],
+      semanticMatches: [],
       sources: [],
       recommendedSource: result.inspection.installSpec,
       rank: result.item.rank,
-      matchPriority: exactOwner ? 0 : 1,
+      matchPriority: matchPriority(result.item.match, exactOwner),
     }
     if (!existing.providers.includes(result.item.provider)) existing.providers.push(result.item.provider)
     if (exactOwner) {
-      const reason = `Exact GitHub owner: ${result.item.match!.value}`
+      const reason = `Exact GitHub owner: ${exactOwnerValue}`
       if (!existing.matchReasons.includes(reason)) existing.matchReasons.push(reason)
     }
+    for (const reason of reasons) if (!existing.matchReasons.includes(reason)) existing.matchReasons.push(reason)
+    if (semantic !== null && !existing.semanticMatches.some(item => item.directoryVersion === semantic.directoryVersion
+      && item.canonicalPathKey === semantic.canonicalPathKey)) existing.semanticMatches.push(semantic)
     const sameSource = existing.sources.find(source => source.inspection.installSpec === result.inspection.installSpec)
     if (sameSource === undefined) {
       existing.sources.push({
@@ -244,10 +315,10 @@ export async function searchPlugins(
       for (const evidence of result.item.evidence) if (!sameSource.evidence.includes(evidence)) sameSource.evidence.push(evidence)
     }
     existing.rank = Math.min(existing.rank, result.item.rank)
-    existing.matchPriority = Math.min(existing.matchPriority, exactOwner ? 0 : 1)
+    existing.matchPriority = Math.min(existing.matchPriority, matchPriority(result.item.match, exactOwner))
     const npm = existing.sources.find(source => source.inspection.sourceType === 'npm')
     existing.recommendedSource = npm?.inspection.installSpec ?? existing.sources[0]!.inspection.installSpec
-    projects.set(identity, existing)
+    projects.set(project, existing)
   }
 
   const candidates = [...projects.values()]
@@ -267,8 +338,10 @@ export async function searchPlugins(
       order: 'rank_ascending',
       returnedCandidates: candidates.length,
       requestedMaximum: maxResults,
-      includeEveryPossiblyRelevant: true,
+      includeEveryDistinctRelevantSolution: true,
       excludeClearlyIrrelevant: true,
+      deduplicateEquivalentSources: true,
+      padToRequestedMaximum: false,
       silentTopNTruncation: false,
     },
     providerErrors,
