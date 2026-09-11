@@ -92,8 +92,17 @@ describe('conversation surface', () => {
     expect(discover.parameters).toMatchObject({
       properties: {
         action: { enum: ['list', 'search', 'search_roles', 'assess_solution', 'inspect', 'status'] },
+        query: { description: expect.stringContaining('Required for search and search_roles') },
         maxResults: { description: expect.stringContaining('Use 20 for ordinary need-based searches') },
-        roles: { items: { required: ['id', 'label', 'query'] } },
+        roles: {
+          items: {
+            required: ['id', 'label', 'query'],
+            properties: {
+              label: { description: expect.stringContaining('1 to 80') },
+              query: { description: expect.stringContaining('1 to 120') },
+            },
+          },
+        },
         selections: { items: { required: ['roleId', 'candidateIdentities'] } },
       },
     })
