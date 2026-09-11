@@ -141,6 +141,10 @@ Agent provides semantic judgment while the manager owns structural enforcement:
 1. The Agent decomposes the user task into the smallest mutually distinct set
    of required and explicitly optional responsibilities. It supplies a focused
    query per role and records any material unresolved choice as an ambiguity.
+   A cross-time observation keeps source-specific state/event reading separate
+   from durable waiting/scheduling and Session resumption. This is a coverage
+   boundary rather than a plugin-count assumption: one plugin may later satisfy
+   both roles.
 2. `search_roles` validates the plan and searches every role concurrently via
    the same provider, inspection, and alias-deduplication path as ordinary
    search. It stores at most 32 drafts for ten minutes and returns grouped
@@ -157,6 +161,12 @@ Agent provides semantic judgment while the manager owns structural enforcement:
 
 Draft ids confer no mutation authority. Installation still requires the normal
 immutable inspection, plan, and separate confirmation path.
+
+Role-plan semantics have a separate opt-in live-model gate. The model sees only
+the bilingual tasks and a JSON output contract; a deterministic evaluator then
+checks reviewed semantic concepts using distinct matching, exact role and
+ambiguity counts, required/optional flags, and forbidden invented roles. The
+live gate never searches, installs, or changes a Profile.
 
 No provider callback participates after discovery.
 

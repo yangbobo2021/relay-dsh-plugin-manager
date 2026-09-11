@@ -37,6 +37,7 @@
     "test:integration": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 vitest run test/integration",
     "acceptance:live:codex": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 RELAY_LIVE_PLUGIN_ACCEPTANCE=1 vitest run test/live/codex.live.test.ts --reporter=verbose",
     "acceptance:live:registry": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node --experimental-strip-types scripts/accept-live-registry.mjs",
+    "acceptance:live:task-roles": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node scripts/accept-task-role-model.mjs",
     "acceptance:controlled": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node --experimental-strip-types scripts/accept-controlled-lifecycle.mjs",
     "acceptance": "RELAY_PLUGIN_MANAGER_TELEMETRY=0 node scripts/accept-local-package.mjs",
     "release:dry-run": "npm publish --dry-run --tag next",

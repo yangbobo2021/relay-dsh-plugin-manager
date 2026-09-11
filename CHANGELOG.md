@@ -26,6 +26,9 @@ All notable changes to this project are documented here.
 - Add a versioned task-solution fixture covering required versus optional
   roles, incomplete and ambiguous tasks, shared multi-role plugins, distinct
   alternatives, invalid cross-role selections, and draft expiry.
+- Add an opt-in bilingual live-model role-planning acceptance command with a
+  strict output schema and deterministic checks for minimal role count,
+  semantic coverage, optionality, ambiguity, and invented near-neighbours.
 
 ## [0.2.6] - 2026-09-07
 

@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0.0",
+  "suite_id": "plugin-manager-task-role-model.2026-09-11.v1",
+  "evaluation_unit": "model_authored_role_plan",
+  "cases": [
+    {
+      "scenario_id": "process-result-to-lark",
+      "task": {
+        "zh-CN": "持续观察本地程序，程序结束后把结果发送到飞书",
+        "en": "Keep watching a local process and send the result to Lark when it exits"
+      },
+      "expected_roles": [
+        { "key": "process_state_reader", "required": true, "match_any": ["进程状态", "程序状态", "状态与结果读取", "退出码", "退出结果", "process state", "process exit", "process result reader", "exit result"] },
+        { "key": "durable_monitor_scheduler", "required": true, "match_any": ["持续监控", "持久监控", "监控调度", "恢复会话", "恢复原会话", "durable monitor", "persistent monitor", "monitor scheduler", "resume session", "resume the original session"] },
+        { "key": "lark_result_delivery", "required": true, "match_any": ["飞书", "lark"] }
+      ],
+      "expected_ambiguities": [],
+      "forbidden_role_match_any": [],
+      "exact_role_count": 3
+    },
+    {
+      "scenario_id": "browse-workspace-files",
+      "task": {
+        "zh-CN": "浏览、筛选并预览当前工作区文件",
+        "en": "Browse, filter, and preview files in the current workspace"
+      },
+      "expected_roles": [
+        { "key": "workspace_file_browser", "required": true, "match_any": ["工作区文件", "文件浏览", "文件预览", "workspace file", "file browser", "file preview"] }
+      ],
+      "expected_ambiguities": [],
+      "forbidden_role_match_any": ["终端", "terminal", "shell"],
+      "exact_role_count": 1
+    },
+    {
+      "scenario_id": "optional-monitor-dashboard",
+      "task": {
+        "zh-CN": "持续监控本地进程，最好还能显示一个监控仪表盘",
+        "en": "Continuously monitor a local process and preferably show a monitoring dashboard"
+      },
+      "expected_roles": [
+        { "key": "process_state_reader", "required": true, "match_any": ["进程状态", "状态读取", "退出事件", "process state", "state reader", "exit event"] },
+        { "key": "durable_monitor_scheduler", "required": true, "match_any": ["持续监控", "持久监控", "监控调度", "恢复原会话", "durable monitor", "persistent monitor", "continuous process monitor", "monitor scheduler", "resume the original session", "resumable"] },
+        { "key": "monitor_dashboard", "required": false, "match_any": ["仪表盘", "dashboard"] }
+      ],
+      "expected_ambiguities": [],
+      "forbidden_role_match_any": [],
+      "exact_role_count": 3
+    },
+    {
+      "scenario_id": "notification-channel-ambiguous",
+      "task": {
+        "zh-CN": "持续观察本地程序，程序结束后通知我",
+        "en": "Keep watching a local process and notify me when it exits"
+      },
+      "expected_roles": [
+        { "key": "process_state_reader", "required": true, "match_any": ["进程状态", "程序状态", "状态读取", "状态与结束事件", "结束事件读取", "退出事件读取", "process state", "state reader", "exit event"] },
+        { "key": "durable_monitor_scheduler", "required": true, "match_any": ["持续监控", "持久监控", "监控调度", "恢复原会话", "durable monitor", "persistent monitor", "monitor scheduler", "resume the original session"] }
+      ],
+      "expected_ambiguities": [
+        { "key": "notification_channel", "match_any": ["通知渠道", "通知方式", "通过什么通知", "什么渠道", "notification channel", "notification method", "how to notify", "which channel"] }
+      ],
+      "forbidden_role_match_any": [],
+      "exact_role_count": 2
+    },
+    {
+      "scenario_id": "remote-mobile-with-memory",
+      "task": {
+        "zh-CN": "让我可以从手机安全访问 DSH，并让它保存跨会话长期记忆",
+        "en": "Let me access DSH securely from my phone and retain long-term memory across sessions"
+      },
+      "expected_roles": [
+        { "key": "secure_mobile_remote_access", "required": true, "match_any": ["手机远程", "移动端访问", "安全访问", "mobile remote", "phone access", "secure remote"] },
+        { "key": "cross_session_memory", "required": true, "match_any": ["跨会话", "长期记忆", "持久记忆", "cross-session", "long-term memory", "persistent memory"] }
+      ],
+      "expected_ambiguities": [],
+      "forbidden_role_match_any": [],
+      "exact_role_count": 2
+    },
+    {
+      "scenario_id": "review-diff-and-send-to-lark",
+      "task": {
+        "zh-CN": "以可交互方式审查 Git diff，然后把审查结果发送到飞书",
+        "en": "Review a Git diff interactively, then send the review result to Lark"
+      },
+      "expected_roles": [
+        { "key": "interactive_git_diff_review", "required": true, "match_any": ["git diff", "差异审查", "交互审查", "interactive diff", "diff review"] },
+        { "key": "lark_result_delivery", "required": true, "match_any": ["飞书", "lark"] }
+      ],
+      "expected_ambiguities": [],
+      "forbidden_role_match_any": [],
+      "exact_role_count": 2
+    }
+  ]
+}

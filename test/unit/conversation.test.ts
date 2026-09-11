@@ -85,6 +85,9 @@ describe('conversation surface', () => {
     expect(discover.description).toContain('owner:NAME')
     expect(discover.description).toContain('passed directly to inspect and plan')
     expect(discover.description).toContain('smallest complete answer')
+    expect(discover.description).toContain('source-specific state/event reading')
+    expect(discover.description).toContain('never merge those coverage responsibilities')
+    expect(discover.description).toContain('browsing, filtering, and previewing files are one file-browser responsibility')
     expect(discover.description).toContain('never repeat npm/GitHub aliases')
     expect(discover.parameters).toMatchObject({
       properties: {

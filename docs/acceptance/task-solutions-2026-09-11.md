@@ -10,12 +10,13 @@ examples:
 1. A three-role process-monitoring and Lark-delivery task is complete only after
    all three required roles have a selected direct solution.
 2. Missing Lark delivery leaves the same task incomplete.
-3. Missing an explicitly optional dashboard does not block completeness.
+3. Missing an explicitly optional dashboard does not block completeness; one
+   combined monitor may cover the state-reader and durable-resumption roles.
 4. One selected plugin can cover two roles while appearing once globally.
 5. Two materially different Lark implementations remain grouped as primary and
    alternative, while an adjacent document plugin is not selected.
 6. An unresolved notification-channel choice keeps an otherwise covered task
-   ambiguous.
+   ambiguous, while the same monitoring coverage boundary is preserved.
 
 Negative tests reject duplicate role plans, duplicate labels or focused
 queries, ambiguity ids that collide with role ids, candidates selected for the
@@ -32,9 +33,9 @@ The runtime guarantees are exercised at three layers:
 The semantic role plan is intentionally Agent-authored: the manager does not
 pretend that candidate presence proves relevance. It validates the structure,
 preserves candidate boundaries, and computes completeness only from the
-Agent-reviewed selections. Model-specific role-decomposition quality can be
-evaluated against the same fixture in an opt-in live Agent run without changing
-the deterministic release gates.
+Agent-reviewed selections. Model-specific role-decomposition quality is
+evaluated separately by A-037 so this deterministic runtime fixture remains a
+release gate.
 
 The full verification passed with 120 automated tests, package build, and local
 DSH package installation against upstream commit

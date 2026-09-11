@@ -49,19 +49,22 @@
       "scenario_id": "missing-optional-dashboard",
       "task": "监控进程，最好还能显示仪表盘",
       "roles": [
-        { "id": "process_monitoring", "label": "进程监控", "query": "持续监控本地进程", "required": true },
+        { "id": "process_state_reader", "label": "进程状态读取", "query": "读取本地进程状态和退出事件", "required": true },
+        { "id": "durable_monitor_scheduler", "label": "持续监控调度", "query": "持续等待进程变化并恢复原会话", "required": true },
         { "id": "monitor_dashboard", "label": "监控仪表盘", "query": "显示进程监控仪表盘", "required": false }
       ],
       "ambiguities": [],
       "candidates": {
-        "process_monitoring": ["plugin:combined-monitor"],
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"],
         "monitor_dashboard": []
       },
       "selections": {
-        "process_monitoring": ["plugin:combined-monitor"],
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"],
         "monitor_dashboard": []
       },
-      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 1 }
+      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 1, "shared_solution_roles": ["process_state_reader", "durable_monitor_scheduler"] }
     },
     {
       "scenario_id": "one-plugin-covers-two-roles",
@@ -100,18 +103,21 @@
       "scenario_id": "notification-channel-ambiguous",
       "task": "程序结束后通知我",
       "roles": [
-        { "id": "process_monitoring", "label": "进程监控", "query": "监控程序直到结束", "required": true }
+        { "id": "process_state_reader", "label": "进程状态读取", "query": "读取程序状态和结束事件", "required": true },
+        { "id": "durable_monitor_scheduler", "label": "持续监控调度", "query": "持续等待程序结束并恢复原会话", "required": true }
       ],
       "ambiguities": [
         { "id": "notification_channel", "question": "使用哪种通知渠道？", "options": ["桌面通知", "飞书", "邮件", "Webhook"] }
       ],
       "candidates": {
-        "process_monitoring": ["plugin:combined-monitor"]
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"]
       },
       "selections": {
-        "process_monitoring": ["plugin:combined-monitor"]
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"]
       },
-      "expected": { "draft_status": "ambiguous", "status": "ambiguous", "complete": false, "missing_required_roles": [], "solution_count": 1 }
+      "expected": { "draft_status": "ambiguous", "status": "ambiguous", "complete": false, "missing_required_roles": [], "solution_count": 1, "shared_solution_roles": ["process_state_reader", "durable_monitor_scheduler"] }
     }
   ]
 }

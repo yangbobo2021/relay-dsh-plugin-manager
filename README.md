@@ -164,6 +164,11 @@ may cover several roles without being repeated; distinct implementations remain
 grouped as primary and alternatives. These drafts expire after ten minutes and
 never authorize installation.
 
+For monitoring that must survive a wait and continue the original conversation,
+the Agent searches source-specific state/event reading separately from durable
+waiting and Session resumption. A plugin that covers both responsibilities is
+still shown only once in the assessed solution.
+
 ## Part of Relay
 
 This plugin is developed in the
