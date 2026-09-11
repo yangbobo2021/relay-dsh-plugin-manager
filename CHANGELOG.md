@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## Unreleased
 
+## [0.3.0] - 2026-09-11
+
 ### Changed
 
 - Combine the bounded Registry keyword pool with semantic-directory routing,
@@ -185,3 +187,4 @@ All notable changes to this project are documented here.
 [0.1.1]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.1.0...v0.1.1
 [0.2.3]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.2...v0.2.3
 [0.2.6]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.5...v0.2.6
+[0.3.0]: https://github.com/yangbobo2021/relay-dsh-plugin-manager/compare/v0.2.6...v0.3.0
