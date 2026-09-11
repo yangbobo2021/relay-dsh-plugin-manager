@@ -22,10 +22,10 @@ natural language --------------------------+
                                             v
                                     PluginManager core
                           +-----------------+------------------+
-                          |                                    |
-                   PluginSearchRuntime                  Operation runtime
-                          |                                    |
-                built-in / external providers         official DSH CLI
+                          |                 |                  |
+                   PluginSearchRuntime  TaskSolutionStore  Operation runtime
+                          |                 |                  |
+                built-in / external providers          official DSH CLI
                                                                |
                                           postcondition -> hot activation
                                                                |
@@ -132,6 +132,31 @@ project. A checked-in bilingual scenario suite tests role coverage, reviewed
 near-neighbour exclusions, duplicate project identities, and exact identifiers
 against the keyword baseline. Rank metrics remain diagnostics and cannot mask
 either a missed role or a hard-check regression.
+
+## Task Solution Workflow
+
+Complex task discovery is deliberately a two-step read-only protocol. The DSH
+Agent provides semantic judgment while the manager owns structural enforcement:
+
+1. The Agent decomposes the user task into the smallest mutually distinct set
+   of required and explicitly optional responsibilities. It supplies a focused
+   query per role and records any material unresolved choice as an ambiguity.
+2. `search_roles` validates the plan and searches every role concurrently via
+   the same provider, inspection, and alias-deduplication path as ordinary
+   search. It stores at most 32 drafts for ten minutes and returns grouped
+   candidate summaries without claiming that presence proves relevance.
+3. The Agent reviews the groups, excludes adjacent or unrelated rows, retains
+   materially different alternatives, and calls `assess_solution` with the
+   selected candidate identities for each role.
+4. Assessment rejects identities that were not returned for that role and
+   duplicate selection rows. It emits one global solution record per identity,
+   annotates a shared solution with every role it covers, and computes required
+   and optional coverage. Missing required roles produce `incomplete`; any
+   unresolved ambiguity produces `ambiguous`; only reviewed full required-role
+   coverage with no ambiguity produces `complete`.
+
+Draft ids confer no mutation authority. Installation still requires the normal
+immutable inspection, plan, and separate confirmation path.
 
 No provider callback participates after discovery.
 

@@ -18,6 +18,7 @@ import PluginSearchRuntime from '../../src/search-runtime.ts'
 import type { SearchResult } from '../../src/search.ts'
 import type { ConfirmationPlan } from '../../src/plans.ts'
 import type { PluginInspection, PluginSource } from '../../src/source.ts'
+import type { TaskSolutionAssessment, TaskSolutionDraft } from '../../src/task-solutions.ts'
 
 const cleanup: string[] = []
 const originalDshHome = process.env.DSH_HOME
@@ -299,6 +300,32 @@ describe('DSH host composition', () => {
     })
 
     try {
+      const solutionDraft = toolJson(await execute('release-search-roles', 'plugin_discover', {
+        action: 'search_roles',
+        query: 'Use separate plugins for two required responsibilities',
+        maxResultsPerRole: 3,
+        roles: [
+          { id: 'first_role', label: 'First role', query: 'first responsibility', required: true },
+          { id: 'second_role', label: 'Second role', query: 'second responsibility', required: true },
+        ],
+      })) as TaskSolutionDraft
+      expect(solutionDraft.status).toBe('needs_review')
+      expect(solutionDraft.roles).toHaveLength(2)
+
+      const solutionAssessment = toolJson(await execute('release-assess-solution', 'plugin_discover', {
+        action: 'assess_solution',
+        solutionId: solutionDraft.solutionId,
+        selections: [
+          { roleId: 'first_role', candidateIdentities: ['github.com/example/plugin-a'] },
+          { roleId: 'second_role', candidateIdentities: ['github.com/example/plugin-b'] },
+        ],
+      })) as TaskSolutionAssessment
+      expect(solutionAssessment).toMatchObject({
+        status: 'complete',
+        coverage: { requiredRoles: 2, coveredRequiredRoles: 2, complete: true },
+      })
+      expect(solutionAssessment.solutions.map(solution => solution.packageName)).toEqual(['plugin-a', 'plugin-b'])
+
       const discovered = toolJson(await execute('release-discover', 'plugin_discover', {
         action: 'search', query: 'release suite', maxResults: 3,
       })) as SearchResult

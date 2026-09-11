@@ -62,3 +62,10 @@ export type {
 } from './search-runtime.ts'
 export type { PluginInspection, PluginSource } from './source.ts'
 export type { TelemetryConfig } from './telemetry.ts'
+export type {
+  TaskAmbiguityInput,
+  TaskRoleInput,
+  TaskRoleSelection,
+  TaskSolutionAssessment,
+  TaskSolutionDraft,
+} from './task-solutions.ts'

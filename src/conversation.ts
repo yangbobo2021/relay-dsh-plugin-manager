@@ -93,11 +93,11 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
   const confirmations = new Map<string, ConfirmationCursor>()
   ctx.tools.register(defineTool({
     name: 'plugin_discover',
-    description: 'Read-only DSH plugin discovery. List installed plugins, search registered sources (including GitHub owner:NAME), inspect one npm/GitHub repository source, or query plugin/operation status. Search returns an inspected, identity-deduplicated candidate pool. Build the smallest complete answer from it: cover every distinct responsibility and materially different solution approach needed by the task, group alternatives by role, exclude clearly unrelated candidates, never repeat npm/GitHub aliases of one project, and never pad or silently cut the answer to a fixed count. A composition is incomplete until every required role is represented. Ranking and directory placement are relevance evidence, not compatibility, security, or installation approval. Search result repository and recommendedSource values can be passed directly to inspect and plan. This tool never changes the profile.',
+    description: 'Read-only DSH plugin discovery. Use search for one capability, exact identity, or GitHub owner:NAME. For a task needing multiple responsibilities, use search_roles: decompose the task into the smallest set of mutually distinct required/optional roles, give each role a focused capability query, and declare unresolved user choices as ambiguities. It returns inspected candidates grouped by role but does not claim they are relevant until reviewed. Exclude unrelated candidates, retain materially different alternatives, then call assess_solution with only reviewed candidate identities from each role. Assessment verifies role membership, merges one solution used by multiple roles, and reports the smallest complete answer only when every required role is selected and no ambiguity remains; never repeat npm/GitHub aliases, pad results, or silently impose a fixed top count. Ranking and directory placement are relevance evidence, not compatibility, security, or installation approval. Search result repository and recommendedSource values can be passed directly to inspect and plan. This tool never changes the profile.',
     parameters: {
       action: {
         type: 'string',
-        enum: ['list', 'search', 'inspect', 'status'],
+        enum: ['list', 'search', 'search_roles', 'assess_solution', 'inspect', 'status'],
         required: true,
         description: 'The read-only operation.',
       },
@@ -105,6 +105,47 @@ export function registerConversationSurface(ctx: Context, manager: PluginManager
       target: { type: 'string', description: 'npm package, github:owner/repo, https://github.com/owner/repo, github.com/owner/repo, or installed package name.' },
       operationId: { type: 'string', description: 'Operation id returned by plugin_manage.' },
       maxResults: { type: 'integer', description: 'Ranked result-page size from 1 to 20. Use 20 for ordinary need-based searches unless the user explicitly asks for fewer.' },
+      maxResultsPerRole: { type: 'integer', description: 'Candidate-pool size from 1 to 20 for each search_roles role. Defaults to 20.' },
+      roles: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string', required: true, description: 'Stable lowercase role id.' },
+            label: { type: 'string', required: true, description: 'Short user-facing responsibility label.' },
+            query: { type: 'string', required: true, description: 'Focused capability query for this role, without unrelated responsibilities.' },
+            required: { type: 'boolean', description: 'False only when the user explicitly made this role optional.' },
+          },
+        },
+        description: 'For search_roles, the smallest mutually distinct responsibility set needed to complete the task.',
+      },
+      ambiguities: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            id: { type: 'string', required: true },
+            question: { type: 'string', required: true },
+            options: { type: 'array', items: { type: 'string' }, required: true },
+          },
+        },
+        description: 'Material unresolved user choices. Any ambiguity prevents a complete assessment.',
+      },
+      solutionId: { type: 'string', description: 'Short-lived id returned by search_roles.' },
+      selections: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            roleId: { type: 'string', required: true },
+            candidateIdentities: { type: 'array', items: { type: 'string' }, required: true },
+          },
+        },
+        description: 'For assess_solution, reviewed candidates grouped by role; first is primary and remaining entries are materially different alternatives.',
+      },
     },
     output: { schema: { type: 'json' }, render: renderJson },
     timeoutMs: 35_000,

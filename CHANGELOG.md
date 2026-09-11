@@ -12,6 +12,10 @@ All notable changes to this project are documented here.
 - Replace fixed-count presentation guidance with a smallest-complete-answer
   contract: cover every distinct solution role and materially different
   approach, group alternatives, and omit unrelated or duplicate projects.
+- Add the read-only `search_roles` and `assess_solution` workflow. The Agent
+  supplies a bounded role decomposition, the manager searches each role through
+  the inspected provider path, and a short-lived draft becomes complete only
+  after reviewed selections cover every required role with no ambiguity.
 
 ### Added
 
@@ -19,6 +23,9 @@ All notable changes to this project are documented here.
   hybrid results for required-role coverage, reviewed false positives,
   duplicate project identities, and exact package/repository queries. Recall
   and reciprocal-rank values remain diagnostic rather than release gates.
+- Add a versioned task-solution fixture covering required versus optional
+  roles, incomplete and ambiguous tasks, shared multi-role plugins, distinct
+  alternatives, invalid cross-role selections, and draft expiry.
 
 ## [0.2.6] - 2026-09-07
 

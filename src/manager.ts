@@ -43,6 +43,13 @@ import type { HotRuntime, HotActivationResult } from './hot-runtime.ts'
 import type { DshRestarter } from './restart.ts'
 import { fail } from './errors.ts'
 import type { Telemetry } from './telemetry.ts'
+import {
+  TaskSolutionStore,
+  validateTaskSolutionPlan,
+  type TaskAmbiguityInput,
+  type TaskRoleInput,
+  type TaskRoleSelection,
+} from './task-solutions.ts'
 
 interface LoaderEntryLike {
   id?: string
@@ -68,14 +75,20 @@ export interface PluginManagerDependencies {
   fetchOptions?: Omit<FetchOptions, 'signal'>
   hmrTimeoutMs?: number
   telemetry?: Telemetry
+  taskSolutions?: TaskSolutionStore
 }
 
 export interface DiscoverRequest {
-  action: 'list' | 'search' | 'inspect' | 'status'
+  action: 'list' | 'search' | 'search_roles' | 'assess_solution' | 'inspect' | 'status'
   query?: string
   target?: string
   operationId?: string
   maxResults?: number
+  maxResultsPerRole?: number
+  roles?: TaskRoleInput[]
+  ambiguities?: TaskAmbiguityInput[]
+  solutionId?: string
+  selections?: TaskRoleSelection[]
 }
 
 export interface PlanRequest {
@@ -152,7 +165,7 @@ const TELEMETRY_ERROR_CODES = new Set([
   'ENABLEMENT_UNSUPPORTED', 'ENABLEMENT_CONFLICT', 'PROTECTED_PLUGIN', 'CONFIRMATION_REQUIRED',
   'CONFIRMATION_INVALID', 'CONFIRMATION_EXPIRED', 'CONFIRMATION_REPLAYED', 'PLAN_STALE',
   'OPERATION_NOT_FOUND', 'DSH_COMMAND_FAILED', 'BATCH_INSTALL_FAILED', 'POSTCONDITION_FAILED',
-  'RESTART_UNAVAILABLE',
+  'RESTART_UNAVAILABLE', 'INVALID_TASK_SOLUTION', 'TASK_SOLUTION_NOT_FOUND', 'TASK_SOLUTION_EXPIRED',
 ])
 
 function safePackageName(value: string | undefined): string {
@@ -219,6 +232,7 @@ export class PluginManager {
   private readonly fetchOptions: Omit<FetchOptions, 'signal'>
   private readonly hmrTimeoutMs: number
   private readonly telemetry: Telemetry
+  private readonly taskSolutions: TaskSolutionStore
 
   constructor(dependencies: PluginManagerDependencies) {
     this.profileDir = dependencies.profileDir
@@ -233,6 +247,7 @@ export class PluginManager {
     this.fetchOptions = dependencies.fetchOptions ?? {}
     this.hmrTimeoutMs = dependencies.hmrTimeoutMs ?? 5_000
     this.telemetry = dependencies.telemetry ?? { capture() {} }
+    this.taskSolutions = dependencies.taskSolutions ?? new TaskSolutionStore()
   }
 
   private capture(event: string, properties: Readonly<Record<string, string | number | boolean>> = {}): void {
@@ -267,7 +282,7 @@ export class PluginManager {
     this.capture('plugin_manager_used', {
       surface: 'discover',
       action: request.action,
-      ...(request.action === 'search'
+      ...(request.action === 'search' || request.action === 'search_roles'
         ? { has_query: (request.query?.trim().length ?? 0) > 0, query_length_bucket: queryLengthBucket(request.query) }
         : {}),
     })
@@ -280,6 +295,28 @@ export class PluginManager {
         inspect: this.inspect,
       }
       return await searchPlugins(this.searchRuntime, request.query ?? '', options)
+    }
+    if (request.action === 'search_roles') {
+      const plan = validateTaskSolutionPlan(request.query ?? '', request.roles ?? [], request.ambiguities ?? [])
+      const maxResultsPerRole = request.maxResultsPerRole ?? 20
+      if (!Number.isInteger(maxResultsPerRole) || maxResultsPerRole < 1 || maxResultsPerRole > 20) {
+        fail('INVALID_TASK_SOLUTION', 'maxResultsPerRole must be an integer from 1 to 20.')
+      }
+      const searches = await Promise.all(plan.roles.map(async role => [role.id, await searchPlugins(
+        this.searchRuntime,
+        role.query,
+        { ...this.fetchOptions, signal, maxResults: maxResultsPerRole, inspect: this.inspect },
+      )] as const))
+      return this.taskSolutions.create({
+        task: plan.task,
+        roles: plan.roles,
+        ambiguities: plan.ambiguities,
+        searches: Object.fromEntries(searches),
+      })
+    }
+    if (request.action === 'assess_solution') {
+      if (request.solutionId === undefined) fail('INVALID_TASK_SOLUTION', 'A task solution id is required for assessment.')
+      return this.taskSolutions.assess(request.solutionId, request.selections ?? [])
     }
     if (request.action === 'inspect') {
       if (request.target === undefined) fail('INVALID_SOURCE', 'A plugin source is required for inspection.')

@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0.0",
+  "suite_id": "plugin-manager-task-solutions.2026-09-11.v1",
+  "evaluation_unit": "reviewed_role_selection",
+  "cases": [
+    {
+      "scenario_id": "process-result-to-lark-complete",
+      "task": "持续观察本地程序，结束后把结果发送到飞书",
+      "roles": [
+        { "id": "process_state_reader", "label": "进程状态读取", "query": "读取本地程序运行状态和退出码", "required": true },
+        { "id": "durable_monitor_scheduler", "label": "持续监控调度", "query": "持续等待状态变化并恢复原 DSH 会话", "required": true },
+        { "id": "lark_result_delivery", "label": "飞书结果投递", "query": "将 DSH 任务结果发送到飞书", "required": true }
+      ],
+      "ambiguities": [],
+      "candidates": {
+        "process_state_reader": ["plugin:process-reader", "plugin:terminal"],
+        "durable_monitor_scheduler": ["plugin:monitor-scheduler"],
+        "lark_result_delivery": ["plugin:lark-bot", "plugin:lark-docs"]
+      },
+      "selections": {
+        "process_state_reader": ["plugin:process-reader"],
+        "durable_monitor_scheduler": ["plugin:monitor-scheduler"],
+        "lark_result_delivery": ["plugin:lark-bot"]
+      },
+      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 3 }
+    },
+    {
+      "scenario_id": "missing-required-delivery",
+      "task": "持续观察本地程序，结束后把结果发送到飞书",
+      "roles": [
+        { "id": "process_state_reader", "label": "进程状态读取", "query": "读取本地程序运行状态", "required": true },
+        { "id": "durable_monitor_scheduler", "label": "持续监控调度", "query": "持续等待状态变化", "required": true },
+        { "id": "lark_result_delivery", "label": "飞书结果投递", "query": "发送结果到飞书", "required": true }
+      ],
+      "ambiguities": [],
+      "candidates": {
+        "process_state_reader": ["plugin:process-reader"],
+        "durable_monitor_scheduler": ["plugin:monitor-scheduler"],
+        "lark_result_delivery": []
+      },
+      "selections": {
+        "process_state_reader": ["plugin:process-reader"],
+        "durable_monitor_scheduler": ["plugin:monitor-scheduler"],
+        "lark_result_delivery": []
+      },
+      "expected": { "draft_status": "incomplete", "status": "incomplete", "complete": false, "missing_required_roles": ["lark_result_delivery"], "solution_count": 2 }
+    },
+    {
+      "scenario_id": "missing-optional-dashboard",
+      "task": "监控进程，最好还能显示仪表盘",
+      "roles": [
+        { "id": "process_monitoring", "label": "进程监控", "query": "持续监控本地进程", "required": true },
+        { "id": "monitor_dashboard", "label": "监控仪表盘", "query": "显示进程监控仪表盘", "required": false }
+      ],
+      "ambiguities": [],
+      "candidates": {
+        "process_monitoring": ["plugin:combined-monitor"],
+        "monitor_dashboard": []
+      },
+      "selections": {
+        "process_monitoring": ["plugin:combined-monitor"],
+        "monitor_dashboard": []
+      },
+      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 1 }
+    },
+    {
+      "scenario_id": "one-plugin-covers-two-roles",
+      "task": "监控进程并负责持续调度",
+      "roles": [
+        { "id": "process_state_reader", "label": "进程状态读取", "query": "读取进程状态", "required": true },
+        { "id": "durable_monitor_scheduler", "label": "持续监控调度", "query": "持续调度进程监控", "required": true }
+      ],
+      "ambiguities": [],
+      "candidates": {
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"]
+      },
+      "selections": {
+        "process_state_reader": ["plugin:combined-monitor"],
+        "durable_monitor_scheduler": ["plugin:combined-monitor"]
+      },
+      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 1, "shared_solution_roles": ["process_state_reader", "durable_monitor_scheduler"] }
+    },
+    {
+      "scenario_id": "retain-distinct-alternatives",
+      "task": "把任务结果发送到飞书",
+      "roles": [
+        { "id": "lark_result_delivery", "label": "飞书结果投递", "query": "将任务结果发送到飞书", "required": true }
+      ],
+      "ambiguities": [],
+      "candidates": {
+        "lark_result_delivery": ["plugin:lark-bot", "plugin:lark-channel", "plugin:lark-docs"]
+      },
+      "selections": {
+        "lark_result_delivery": ["plugin:lark-bot", "plugin:lark-channel"]
+      },
+      "expected": { "draft_status": "needs_review", "status": "complete", "complete": true, "missing_required_roles": [], "solution_count": 2, "primary": "plugin:lark-bot", "alternatives": ["plugin:lark-channel"] }
+    },
+    {
+      "scenario_id": "notification-channel-ambiguous",
+      "task": "程序结束后通知我",
+      "roles": [
+        { "id": "process_monitoring", "label": "进程监控", "query": "监控程序直到结束", "required": true }
+      ],
+      "ambiguities": [
+        { "id": "notification_channel", "question": "使用哪种通知渠道？", "options": ["桌面通知", "飞书", "邮件", "Webhook"] }
+      ],
+      "candidates": {
+        "process_monitoring": ["plugin:combined-monitor"]
+      },
+      "selections": {
+        "process_monitoring": ["plugin:combined-monitor"]
+      },
+      "expected": { "draft_status": "ambiguous", "status": "ambiguous", "complete": false, "missing_required_roles": [], "solution_count": 1 }
+    }
+  ]
+}

@@ -34,6 +34,9 @@ export type PluginManagerErrorCode =
   | 'BATCH_INSTALL_FAILED'
   | 'POSTCONDITION_FAILED'
   | 'RESTART_UNAVAILABLE'
+  | 'INVALID_TASK_SOLUTION'
+  | 'TASK_SOLUTION_NOT_FOUND'
+  | 'TASK_SOLUTION_EXPIRED'
 
 export class PluginManagerError extends Error {
   readonly code: PluginManagerErrorCode

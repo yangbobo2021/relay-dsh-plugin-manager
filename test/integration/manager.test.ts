@@ -7,6 +7,8 @@ import { PluginManager, type PluginManagerDependencies } from '../../src/manager
 import { readManagerState, readProfileManifest, writeProfileManifest } from '../../src/profile.ts'
 import type { PluginInspection, PluginSource } from '../../src/source.ts'
 import type { Telemetry } from '../../src/telemetry.ts'
+import type { PluginSearchProvider } from '../../src/search-runtime.ts'
+import type { TaskSolutionAssessment, TaskSolutionDraft } from '../../src/task-solutions.ts'
 
 const PACKAGE = 'example-dsh-plugin'
 const VERSION = '1.2.3'
@@ -102,12 +104,13 @@ function manager(
     restartAvailable?: boolean
     inspect?: NonNullable<PluginManagerDependencies['inspect']>
     telemetry?: Telemetry
+    searchProviders?: PluginSearchProvider[]
   } = {},
 ): PluginManager {
   let hotActive = options.hotActive ?? false
   return new PluginManager({
     profileDir,
-    searchRuntime: { entries: () => [] },
+    searchRuntime: { entries: () => options.searchProviders ?? [] },
     runner: { runPlugin },
     inspect: options.inspect ?? vi.fn(async (_source: unknown) => inspection()),
     hot: {
@@ -142,6 +145,58 @@ function manager(
 }
 
 describe('PluginManager official-command integration', () => {
+  it('PM-029/PM-030/PM-031 searches each task role, groups candidates, and verifies complete coverage', async () => {
+    const dir = await fixture()
+    cleanup.push(dir)
+    const queries: string[] = []
+    const provider: PluginSearchProvider = {
+      id: 'fixture',
+      search: async request => {
+        queries.push(request.query)
+        const packageName = request.query.includes('进程') ? 'process-reader' : 'lark-bot'
+        return [{
+          id: `fixture:${packageName}`,
+          title: packageName,
+          sources: [{ kind: 'npm', package: packageName }],
+        }]
+      },
+    }
+    const inspect = vi.fn(async (source: string | PluginSource) => namedInspection(fixtureSourceName(source)))
+    const subject = manager(dir, vi.fn(), { inspect, searchProviders: [provider] })
+
+    const draft = await subject.discover({
+      action: 'search_roles',
+      query: '持续观察程序，结束后发送到飞书',
+      maxResultsPerRole: 3,
+      roles: [
+        { id: 'process_reader', label: '进程状态读取', query: '读取进程状态', required: true },
+        { id: 'lark_delivery', label: '飞书结果投递', query: '发送结果到飞书', required: true },
+      ],
+    }) as TaskSolutionDraft
+
+    expect(queries.sort()).toEqual(['发送结果到飞书', '读取进程状态'].sort())
+    expect(draft.status).toBe('needs_review')
+    expect(draft.roles.map(role => ({ id: role.id, candidates: role.candidates.map(candidate => candidate.packageName) }))).toEqual([
+      { id: 'process_reader', candidates: ['process-reader'] },
+      { id: 'lark_delivery', candidates: ['lark-bot'] },
+    ])
+
+    const assessed = await subject.discover({
+      action: 'assess_solution',
+      solutionId: draft.solutionId,
+      selections: draft.roles.map(role => ({ roleId: role.id, candidateIdentities: [role.candidates[0]!.identity] })),
+    }) as TaskSolutionAssessment
+
+    expect(assessed.status).toBe('complete')
+    expect(assessed.coverage).toMatchObject({
+      requiredRoles: 2,
+      coveredRequiredRoles: 2,
+      missingRequiredRoleIds: [],
+      complete: true,
+    })
+    expect(assessed.solutions.map(solution => solution.packageName)).toEqual(['process-reader', 'lark-bot'])
+  })
+
   it('A-029 passes emitted repository identities to inspect and recommended sources to plan', async () => {
     const dir = await fixture()
     cleanup.push(dir)

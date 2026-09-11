@@ -155,6 +155,15 @@ alternatives are grouped by role, and clearly unrelated or duplicate candidates
 are omitted. It neither pads the answer to twenty nor silently cuts it to an
 arbitrary top count. Exact package and repository queries remain rank one.
 
+For a task with several responsibilities, the Agent uses a two-step read-only
+workflow. It first searches a minimal set of required and optional roles, then
+reviews each role group and asks the manager to assess only the selected direct
+solutions. The manager reports `complete` only when every required role has a
+reviewed candidate and no material user choice remains unresolved. One plugin
+may cover several roles without being repeated; distinct implementations remain
+grouped as primary and alternatives. These drafts expire after ten minutes and
+never authorize installation.
+
 ## Part of Relay
 
 This plugin is developed in the

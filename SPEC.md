@@ -53,6 +53,9 @@ service.
 | PM-026 | Return search candidates as one explicit, one-based relevance-ranked pool with a default and maximum size of 20. The model-facing contract requires the Agent to produce the smallest complete answer: cover every distinct responsibility and materially different solution approach, group alternatives by role, exclude clearly unrelated candidates, merge npm/GitHub aliases of one project, and neither pad nor silently cut the answer to a fixed count. Ranking remains distinct from compatibility, security, or installation approval. |
 | PM-027 | Send default-on anonymous operational telemetry only to the Registry's canonical first-party HTTPS endpoint under schema `1.1.0`, with explicit `RELAY_PLUGIN_MANAGER_TELEMETRY=0` or `telemetry.enabled: false` opt-out. Events are limited to manager discovery/planning type and manager-executed install start/success/failure, including per-plugin batch outcomes. An operator-only `RELAY_PLUGIN_MANAGER_TELEMETRY_TEST=1` or `telemetry.test: true` mode adds only `is_test: true`; ordinary events omit the marker. Never send raw search text, conversation content, Profile state, installed inventory, paths, credentials, command output, error text, account identity, PostHog configuration, or client timestamps. Store only a stable random anonymous ID locally, create it lazily, and never let storage, validation, network, Registry, or analytics failure affect plugin management. |
 | PM-028 | Use the Registry keyword index as a bounded recall baseline and the active semantic directory as reranking evidence, with exact-identifier dominance, named-technology disambiguation, snapshot-consistency checks, and safe single-source fallback. A versioned bilingual scenario suite evaluates the post-inspection, deduplicated result pool for required-role coverage, forbidden near-neighbours, exact identifiers, and duplicate identities. Release comparison may not hide an individual hard-check regression behind aggregate improvement. |
+| PM-029 | For a task with multiple responsibilities, the Agent authors the smallest mutually distinct role plan. Every role has a stable id, user-facing label, focused search query, and required/optional status; material unresolved user choices are explicit ambiguities rather than guessed defaults. The manager validates bounds, text, uniqueness, and structure before searching. |
+| PM-030 | `search_roles` searches all validated roles concurrently through the normal inspected and identity-deduplicated provider path, preserves candidates in separate role groups, and creates a bounded, short-lived read-only draft. Candidate presence alone is `needs_review`, never proof of relevance or completeness. A required role with no candidate is already `incomplete`; any unresolved ambiguity is `ambiguous`. |
+| PM-031 | `assess_solution` accepts only candidate identities previously returned for their declared role. The first reviewed identity is the primary and additional identities are materially different alternatives selected by the Agent. One candidate selected for multiple roles appears once in the solution set with all role ids. The result is `complete` only when every required role has a reviewed selection and no ambiguity remains; missing optional roles do not block completeness. |
 
 ## Command Grammar
 
@@ -70,7 +73,7 @@ behavior drift between direct commands and conversation.
 
 ### `plugin_discover`
 
-Read-only actions: `list`, `search`, `inspect`, `status`.
+Read-only actions: `list`, `search`, `search_roles`, `assess_solution`, `inspect`, `status`.
 
 `search` accepts capability text or GitHub owner forms such as
 `owner:yangbobo2021`. `inspect` accepts npm sources and all three GitHub
@@ -80,6 +83,15 @@ candidate carries its explicit display rank and semantic-directory evidence
 when available. The Agent builds a minimal complete answer grouped by required
 role and materially different approach. It does not repeat source aliases, pad
 the answer, or silently impose an arbitrary top count.
+
+For a multi-responsibility task, `search_roles` receives an Agent-authored role
+plan and returns a short-lived grouped candidate draft. The Agent reviews each
+group and calls `assess_solution` with only direct solutions. Assessment rejects
+unknown roles and cross-role or duplicate selections, groups primary and
+alternative implementations, merges one plugin used by multiple roles, and
+reports explicit required-role coverage. If a material choice remains unknown,
+the draft and assessment remain `ambiguous` until the user resolves it and the
+Agent creates a new plan.
 
 ### `plugin_manage`
 
