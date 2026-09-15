@@ -1,12 +1,12 @@
 # Manage DeepSeek Harness Plugins from Chat
 
-> **Now supports DSH `0.1.2-rc.1` while retaining `0.1.2-alpha.3` compatibility.** The stable channel includes the evidence-backed DSH Registry search provider and anonymous operational analytics. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.2-rc.1-20260903).
+> **Release candidate `0.3.1-rc.1` is verified on official DSH `0.1.5-rc.2` and `0.1.6-alpha.1`.** No implementation adaptation was required; its peer metadata declares both exact releases. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.6-alpha.1-20260915).
 
-> **Release channel:** install `relay-dsh-plugin-manager@latest` to receive the current stable manager.
+> **Release channels:** `latest` → `0.3.0`; `next` → `0.3.1-rc.1`.
 
 ```bash
-npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add relay-dsh-plugin-manager@latest
-npx @deepseek-ai/dsh@0.1.2-rc.1 web
+npx @deepseek-ai/dsh@0.1.6-alpha.1 plugin --profile web add relay-dsh-plugin-manager@next
+npx @deepseek-ai/dsh@0.1.6-alpha.1 web
 ```
 
 [![npm version](https://img.shields.io/npm/v/relay-dsh-plugin-manager?label=npm)](https://www.npmjs.com/package/relay-dsh-plugin-manager)
