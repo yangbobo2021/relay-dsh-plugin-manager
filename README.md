@@ -1,8 +1,8 @@
 # Manage DeepSeek Harness Plugins from Chat
 
-> **Release candidate `0.3.1-rc.1` is verified on official DSH `0.1.5-rc.2` and `0.1.6-alpha.1`.** No implementation adaptation was required; its peer metadata declares both exact releases. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.6-alpha.1-20260915).
+> **Release candidate `0.3.1-rc.2` is verified on official DSH `0.1.5-rc.2` and `0.1.6-alpha.1`.** No implementation adaptation was required; its peer metadata declares both exact releases. [Install it from npm](https://www.npmjs.com/package/relay-dsh-plugin-manager) · [Compatibility evidence](https://github.com/yangbobo2021/Relay/tree/codex/relay-foundation/dsh-lab/dsh-0.1.6-alpha.1-20260915).
 
-> **Release channels:** `latest` → `0.3.0`; `next` → `0.3.1-rc.1`.
+> **Release channels:** `latest` → `0.3.0`; `next` → `0.3.1-rc.2`.
 
 ```bash
 npx @deepseek-ai/dsh@0.1.6-alpha.1 plugin --profile web add relay-dsh-plugin-manager@next

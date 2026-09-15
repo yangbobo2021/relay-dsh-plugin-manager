@@ -42,7 +42,7 @@ jobs:
         with:
           version: 11.7.0
       - run: npm ci --ignore-scripts
-      - run: pnpm install --dir test/fixtures/dsh-runtime --frozen-lockfile --ignore-scripts
+      - run: pnpm install --dir test/fixtures/dsh-runtime --frozen-lockfile --ignore-scripts --config.minimum-release-age=0
       - run: npm run build
       - run: npm run acceptance
         env:
